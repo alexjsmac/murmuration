@@ -22,7 +22,7 @@ Single Next.js 16 static-export app deployed to Firebase Hosting. Five routes fo
 - `/` — landing + QR code
 - `/play` — phone controller; user picks Placer (drop a wireframe object with shape/color/effect) or Glitcher (drag-pad → laser beam)
 - `/display` — wall-projected R3F scene
-- `/admin?key=mutek` — operator overrides
+- `/admin?key=...` — operator overrides (key value comes from `NEXT_PUBLIC_ADMIN_KEY` in `.env.local`)
 - `/promo` — square 1:1 promo render with title overlay
 
 **State model.** Single global "scene" room — no per-user / per-room isolation. The display side is the source of truth: it owns the round-reset timer (`app/display/ResetController.tsx`) and writes `/scene/resetAt` on each rollover. Everyone else (play, admin, promo) subscribes via the hooks in `hooks/use*.ts` and writes contributions via the services in `lib/*-service.ts`. Connection lifecycle uses Firebase `onDisconnect().remove()` (`lib/connection-manager.ts`) so phones disappearing automatically clean their nodes.

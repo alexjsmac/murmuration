@@ -18,7 +18,7 @@ import { realtimeDb } from "@/lib/firebase-config";
 import type { Connection, Mode } from "@/lib/types";
 
 const ADMIN_KEY_PARAM = "key";
-const ADMIN_KEY_VALUE = "mutek";
+const ADMIN_KEY_VALUE = process.env.NEXT_PUBLIC_ADMIN_KEY ?? "";
 const ADMIN_STORAGE = "murmuration-admin";
 
 export default function AdminPage() {
@@ -27,7 +27,7 @@ export default function AdminPage() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const key = url.searchParams.get(ADMIN_KEY_PARAM);
-    if (key === ADMIN_KEY_VALUE) {
+    if (ADMIN_KEY_VALUE && key === ADMIN_KEY_VALUE) {
       localStorage.setItem(ADMIN_STORAGE, "1");
       setAuthorized(true);
       return;
@@ -39,12 +39,7 @@ export default function AdminPage() {
     return <Status label="CHECKING" />;
   }
   if (!authorized) {
-    return (
-      <Status
-        label="LOCKED"
-        sub={`Append ?${ADMIN_KEY_PARAM}=${ADMIN_KEY_VALUE} to the URL.`}
-      />
-    );
+    return <Status label="LOCKED" />;
   }
   if (!realtimeDb) {
     return <Status label="OFFLINE" sub="Firebase env not configured." />;
