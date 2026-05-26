@@ -9,7 +9,7 @@ import { useNow } from "@/hooks/useNow";
 import { useScene } from "@/hooks/useScene";
 import {
   PALETTE,
-  SHAPES,
+  GEOMETRIC_SHAPES,
   SHAPE_LABELS,
   EFFECTS,
   EFFECT_LABELS,
@@ -17,6 +17,7 @@ import {
   type Shape,
 } from "@/lib/types";
 import { GLITCHER_THROTTLE_MS, ROUND_DURATION_MS } from "@/lib/presets";
+import { extractEdgeSegments } from "@/lib/image-to-edges";
 
 const DEFAULT_SHAPE: Shape = "ico";
 const DEFAULT_COLOR = PALETTE[0];
@@ -46,6 +47,11 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
   const [padDisplay, setPadDisplay] = useState(DEFAULT_PAD);
   const [held, setHeld] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selfieState, setSelfieState] = useState<
+    "none" | "processing" | "ready" | "error"
+  >("none");
+
   // Stable per-session random rotation so each wireframe has a unique pose
   // without re-randomizing on every render.
   const rotationRef = useRef({
@@ -73,6 +79,16 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     if (!sessionId) return;
     updateWireframeFields(sessionId, { shape, color, effect });
   }, [sessionId, shape, color, effect]);
+
+  // Picking a non-selfie shape clears any previously-uploaded customLines
+  // so the display falls back to the standard geometry.
+  useEffect(() => {
+    if (!sessionId) return;
+    if (shape !== "selfie") {
+      updateWireframeFields(sessionId, { customLines: null });
+      setSelfieState("none");
+    }
+  }, [sessionId, shape]);
 
   // Position updates throttled to ~16 Hz while held; display sync ~12 Hz.
   // When not held we skip position writes — the display side already knows
@@ -109,6 +125,27 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     if (!sessionId) return;
     updateWireframeFields(sessionId, { dragging: held });
   }, [sessionId, held]);
+
+  const handleSelfieFile = async (file: File) => {
+    if (!sessionId) return;
+    setSelfieState("processing");
+    try {
+      const segments = await extractEdgeSegments(file);
+      if (segments.length === 0) {
+        setSelfieState("error");
+        return;
+      }
+      await updateWireframeFields(sessionId, {
+        shape: "selfie",
+        customLines: segments,
+      });
+      setShape("selfie");
+      setSelfieState("ready");
+    } catch (err) {
+      console.error("selfie extraction failed", err);
+      setSelfieState("error");
+    }
+  };
 
   const updatePositionFromEvent = (e: React.PointerEvent<HTMLDivElement>) => {
     const pad = padRef.current;
@@ -151,7 +188,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
           Shape
         </p>
         <div className="grid grid-cols-5 gap-2">
-          {SHAPES.map((s) => (
+          {GEOMETRIC_SHAPES.map((s) => (
             <button
               key={s}
               type="button"
@@ -169,6 +206,36 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
             </button>
           ))}
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleSelfieFile(file);
+            e.target.value = ""; // allow re-selecting the same file
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={selfieState === "processing"}
+          className={`mt-2 w-full border py-2 text-[10px] uppercase tracking-[0.3em] transition-colors ${
+            shape === "selfie"
+              ? "border-magenta bg-magenta/15 text-foreground"
+              : "border-foreground/15 text-foreground/60 hover:border-foreground/40"
+          } disabled:opacity-50`}
+        >
+          {selfieState === "processing"
+            ? "[ Processing… ]"
+            : selfieState === "error"
+              ? "[ Try another photo ]"
+              : shape === "selfie"
+                ? "[ Selfie · Tap to change ]"
+                : "[ Upload Selfie ]"}
+        </button>
       </section>
 
       <section className="px-4 py-2">

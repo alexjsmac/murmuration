@@ -11,9 +11,13 @@ import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import type { Effect, Shape } from "@/lib/types";
 
+// Promo decor uses only geometric shapes — selfies are runtime-only and
+// have no place in a static promo render.
+type GeometricShape = Exclude<Shape, "selfie">;
+
 interface DecorEntry {
   id: string;
-  shape: Shape;
+  shape: GeometricShape;
   color: string;
   effect: Effect;
   position: { x: number; y: number; z: number };

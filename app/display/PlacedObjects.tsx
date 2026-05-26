@@ -1,9 +1,11 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
+  BufferGeometry,
   Color as ThreeColor,
+  Float32BufferAttribute,
   type Group,
   type LineBasicMaterial,
 } from "three";
@@ -70,6 +72,26 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
     }
   });
 
+  // Selfie geometry — built on-demand from the user's uploaded edge data.
+  // Rebuilt whenever customLines changes. For non-selfie shapes this is
+  // unused.
+  const selfieGeometry = useMemo(() => {
+    if (obj.shape !== "selfie" || !obj.customLines?.length) return null;
+    const geom = new BufferGeometry();
+    geom.setAttribute(
+      "position",
+      new Float32BufferAttribute(obj.customLines, 3),
+    );
+    return geom;
+  }, [obj.shape, obj.customLines]);
+
+  // Dispose old selfie geometry on swap/unmount to avoid GPU buffer leak.
+  useEffect(() => {
+    return () => {
+      selfieGeometry?.dispose();
+    };
+  }, [selfieGeometry]);
+
   if (obj.shape === "axisGizmo") {
     return (
       <group
@@ -79,6 +101,28 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
         scale={0.6}
       >
         <axesHelper args={[0.6]} />
+      </group>
+    );
+  }
+
+  if (obj.shape === "selfie") {
+    // Awaiting upload: render nothing rather than fall through to a
+    // missing-geometry crash.
+    if (!selfieGeometry) return null;
+    return (
+      <group
+        ref={groupRef}
+        position={[obj.position.x, obj.position.y, obj.position.z]}
+        rotation={[obj.rotation.x, obj.rotation.y, obj.rotation.z]}
+      >
+        <lineSegments geometry={selfieGeometry}>
+          <lineBasicMaterial
+            ref={matRef}
+            color={obj.color}
+            transparent
+            opacity={0.95}
+          />
+        </lineSegments>
       </group>
     );
   }

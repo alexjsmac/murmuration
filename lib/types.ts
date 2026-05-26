@@ -1,8 +1,24 @@
 export type Mode = "placer" | "glitcher";
 
-export type Shape = "cube" | "ico" | "head" | "cone" | "axisGizmo";
+export type Shape =
+  | "cube"
+  | "ico"
+  | "head"
+  | "cone"
+  | "axisGizmo"
+  | "selfie";
 
-export const SHAPES: Shape[] = ["cube", "ico", "head", "cone", "axisGizmo"];
+/** Standard geometric shapes that show in the 5-column picker row. */
+export const GEOMETRIC_SHAPES: Shape[] = [
+  "cube",
+  "ico",
+  "head",
+  "cone",
+  "axisGizmo",
+];
+
+/** All shapes including the user-uploaded "selfie" variant. */
+export const SHAPES: Shape[] = [...GEOMETRIC_SHAPES, "selfie"];
 
 export const SHAPE_LABELS: Record<Shape, string> = {
   cube: "CUBE",
@@ -10,6 +26,7 @@ export const SHAPE_LABELS: Record<Shape, string> = {
   head: "HEAD",
   cone: "CONE",
   axisGizmo: "AXIS",
+  selfie: "SELFIE",
 };
 
 export type Effect =
@@ -71,6 +88,12 @@ export interface Wireframe {
   color: Color;
   effect: Effect;
   dragging?: boolean;
+  /**
+   * Flat array of [x,y,z,x,y,z,...] for shape="selfie" — client-side
+   * edge-extracted line segments from a user-uploaded photo. Each pair of
+   * triplets forms one LineSegments primitive on the wall.
+   */
+  customLines?: number[];
   joinedAt: number;
 }
 

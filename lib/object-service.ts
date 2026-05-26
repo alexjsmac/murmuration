@@ -50,6 +50,7 @@ export async function updateWireframeFields(
     position: Position3;
     rotation: Position3;
     dragging: boolean;
+    customLines: number[] | null;
   }>,
 ): Promise<void> {
   if (!realtimeDb) return;
