@@ -27,14 +27,19 @@ export function Glitchers() {
 }
 
 function Beam({ g }: { g: GlitcherEntry }) {
-  const x = g.position.x * 6;
-  const y = g.position.y * 3;
-  const length = 5 + g.intensity * 3;
-  const radius = 0.15 + g.intensity * 0.5;
+  // All beams anchored at scene origin. Phone pad x/y becomes yaw/pitch
+  // (the user "aims" outward from center). Hold strength → length + thickness.
+  const yaw = g.position.x * (Math.PI / 3); // ~±60° horizontal sweep
+  const pitch = g.position.y * (Math.PI / 4); // ~±45° vertical sweep
+  const length = 1.5 + g.intensity * 11;
+  const radius = 0.15 + g.intensity * 0.6;
 
   return (
-    <group position={[x, y, 3]}>
-      <mesh rotation={[Math.PI, 0, 0]} position={[0, 0, -length / 2]}>
+    <group rotation={[pitch, yaw, 0]}>
+      {/* ConeGeometry tip at +y, base at -y. Rotate -π/2 around X so the
+          tip points to -z and the base to +z, then translate forward by
+          length/2 so the tip ends up at origin and the base at +z*length. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, length / 2]}>
         <coneGeometry args={[radius, length, 24, 1, true]} />
         <meshBasicMaterial
           color={g.hue}

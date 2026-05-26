@@ -2,11 +2,20 @@
 
 import { AdditiveBlending, DoubleSide } from "three";
 
+/**
+ * Static decorative beam for /promo, matching the live beam geometry —
+ * tip anchored at scene origin, fans outward in a fixed direction.
+ */
 export function PromoBeam() {
+  const yaw = 0.7; // ~40° right
+  const pitch = -0.18; // slight downward
+  const length = 8;
+  const radius = 0.5;
+
   return (
-    <group position={[2.6, 1.0, 1.5]}>
-      <mesh rotation={[Math.PI, 0.15, 0]} position={[0, 0, -2.5]}>
-        <coneGeometry args={[0.45, 5, 24, 1, true]} />
+    <group rotation={[pitch, yaw, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, length / 2]}>
+        <coneGeometry args={[radius, length, 24, 1, true]} />
         <meshBasicMaterial
           color="#00f0ff"
           transparent
