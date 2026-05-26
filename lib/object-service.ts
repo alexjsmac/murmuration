@@ -49,6 +49,7 @@ export async function updateWireframeFields(
     effect: Effect;
     position: Position3;
     rotation: Position3;
+    dragging: boolean;
   }>,
 ): Promise<void> {
   if (!realtimeDb) return;

@@ -11,7 +11,6 @@ import { useObjects, type WireframeEntry } from "@/hooks/useObjects";
 import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
-import { audioLevel } from "@/hooks/useAudioLevel";
 
 export function PlacedObjects() {
   const wireframes = useObjects();
@@ -57,17 +56,17 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
       t,
     });
 
-    // Audio-reactive layer: scale pulse + 3D position jitter from bass.
-    // Per-seed phase so objects don't move in unison.
-    const bass = audioLevel.bass;
-    if (bass > 0.02) {
-      const pulse = 1 + bass * 0.55 * (0.6 + 0.4 * Math.sin(t * 6 + seed * 3.1));
-      groupRef.current.scale.multiplyScalar(pulse);
-
-      const jitter = bass * 0.32;
-      groupRef.current.position.x += Math.sin(seed * 7.7 + t * 9) * jitter;
-      groupRef.current.position.y += Math.cos(seed * 11.3 + t * 7) * jitter * 0.7;
-      groupRef.current.position.z += Math.sin(seed * 13.1 + t * 8) * jitter;
+    // When the user is NOT actively dragging, add a gentle floating drift
+    // around the last drag position. Per-seed phase so objects don't all
+    // wander in unison. Disabled while dragging so the object tracks the
+    // finger precisely.
+    if (!obj.dragging) {
+      const dx = Math.sin(t * 0.42 + seed * 1.7) * 0.28;
+      const dy = Math.cos(t * 0.37 + seed * 2.3) * 0.18;
+      const dz = Math.sin(t * 0.49 + seed * 3.1) * 0.22;
+      groupRef.current.position.x += dx;
+      groupRef.current.position.y += dy;
+      groupRef.current.position.z += dz;
     }
   });
 

@@ -60,7 +60,9 @@ export interface Position2 {
 /**
  * A user's wireframe contribution. Keyed in RTDB by sessionId — one per
  * connected Placer user. shape/color/effect customized via pickers,
- * position updated live from the drag pad.
+ * position updated live from the drag pad. `dragging` is true while the
+ * user's finger is on the pad — display uses it to skip idle drift so
+ * the object follows the finger precisely.
  */
 export interface Wireframe {
   shape: Shape;
@@ -68,6 +70,7 @@ export interface Wireframe {
   rotation: Position3;
   color: Color;
   effect: Effect;
+  dragging?: boolean;
   joinedAt: number;
 }
 

@@ -74,14 +74,21 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     updateWireframeFields(sessionId, { shape, color, effect });
   }, [sessionId, shape, color, effect]);
 
-  // Position updates throttled to ~16 Hz; crosshair display throttled to ~12 Hz.
+  // Position updates throttled to ~16 Hz while held; display sync ~12 Hz.
+  // When not held we skip position writes — the display side already knows
+  // the last position and is applying gentle idle drift.
+  const heldRef = useRef(false);
+  useEffect(() => {
+    heldRef.current = held;
+  }, [held]);
+
   useEffect(() => {
     if (!sessionId) return;
     let raf = 0;
     let lastWrite = 0;
     let lastDisplay = 0;
     const tick = (now: number) => {
-      if (now - lastWrite > POSITION_THROTTLE_MS) {
+      if (heldRef.current && now - lastWrite > POSITION_THROTTLE_MS) {
         lastWrite = now;
         updateWireframeFields(sessionId, {
           position: padToScene(padPosRef.current),
@@ -96,6 +103,12 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [sessionId]);
+
+  // Mirror `held` state into RTDB so the display can gate idle drift on it.
+  useEffect(() => {
+    if (!sessionId) return;
+    updateWireframeFields(sessionId, { dragging: held });
+  }, [sessionId, held]);
 
   const updatePositionFromEvent = (e: React.PointerEvent<HTMLDivElement>) => {
     const pad = padRef.current;
