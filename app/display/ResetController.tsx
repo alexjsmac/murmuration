@@ -9,33 +9,25 @@ import {
   setPreset,
   triggerReset,
 } from "@/lib/scene-service";
-import { clearAllObjects } from "@/lib/object-service";
 import { ROUND_DURATION_MS, nextPresetId } from "@/lib/presets";
 
 const TICK_INTERVAL_MS = 1000;
 
+/**
+ * Round timer drives preset rotation only — user wireframes are owned by
+ * their users (one-per-session, RTDB-keyed by sessionId, removed on
+ * disconnect) and are NOT wiped by the auto-reset. Reset = visual variety
+ * via hero swap, not "kick everyone out."
+ */
 export function ResetController() {
   const scene = useScene();
   const lastTickRef = useRef(0);
-  const lastResetSeen = useRef(0);
 
   useEffect(() => {
     if (realtimeDb) {
       ensureSceneInitialized();
     }
   }, []);
-
-  useEffect(() => {
-    if (scene.resetAt && scene.resetAt !== lastResetSeen.current) {
-      const previous = lastResetSeen.current;
-      lastResetSeen.current = scene.resetAt;
-      // Skip wipe on first observation (no previous reset known) to avoid
-      // racing with the initial scene init.
-      if (previous !== 0) {
-        clearAllObjects();
-      }
-    }
-  }, [scene.resetAt]);
 
   useFrame(() => {
     if (scene.pause) return;

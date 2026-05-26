@@ -12,7 +12,7 @@ import {
   setPreset,
   triggerReset,
 } from "@/lib/scene-service";
-import { clearAllObjects } from "@/lib/object-service";
+import { clearAllWireframes } from "@/lib/object-service";
 import { PRESETS, ROUND_DURATION_MS } from "@/lib/presets";
 import { ref, onValue, remove } from "firebase/database";
 import { realtimeDb } from "@/lib/firebase-config";
@@ -76,13 +76,8 @@ function Dashboard() {
     return { placers, glitchers: glitcherConns, total: entries.length };
   }, [connections]);
 
-  const objectsThisRound = useMemo(
-    () =>
-      objects.filter(
-        (o) => !scene.resetAt || o.placedAt >= scene.resetAt - 1000,
-      ).length,
-    [objects, scene.resetAt],
-  );
+  // One wireframe per connected Placer — no round-based filtering anymore.
+  const wireframeCount = objects.length;
 
   const remainingMs = scene.resetAt
     ? Math.max(0, ROUND_DURATION_MS - (now - scene.resetAt))
@@ -103,7 +98,7 @@ function Dashboard() {
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
         <Stat label="Placers" value={counts.placers} />
         <Stat label="Glitchers" value={counts.glitchers} />
-        <Stat label="Objects" value={objectsThisRound} />
+        <Stat label="Wireframes" value={wireframeCount} />
         <Stat label="Round" value={`${remainingSec}s`} />
       </section>
 
@@ -118,10 +113,10 @@ function Dashboard() {
           </button>
           <button
             type="button"
-            onClick={() => clearAllObjects()}
+            onClick={() => clearAllWireframes()}
             className="flex-1 border border-foreground/20 hover:border-foreground/50 px-4 py-3 uppercase tracking-[0.3em] text-xs"
           >
-            [ Clear Objects ]
+            [ Clear Wireframes ]
           </button>
         </Row>
         <Row>

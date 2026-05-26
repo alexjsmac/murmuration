@@ -7,41 +7,46 @@ import {
   type Group,
   type LineBasicMaterial,
 } from "three";
-import { useObjects, type PlacedObjectEntry } from "@/hooks/useObjects";
-import { useScene } from "@/hooks/useScene";
+import { useObjects, type WireframeEntry } from "@/hooks/useObjects";
 import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { audioLevel } from "@/hooks/useAudioLevel";
 
 export function PlacedObjects() {
-  const objects = useObjects();
-  const scene = useScene();
+  const wireframes = useObjects();
 
-  const visible = useMemo(() => {
-    return objects
-      .filter((o) => !scene.resetAt || o.placedAt >= scene.resetAt - 1000)
-      .slice(-MAX_OBJECTS_RENDERED);
-  }, [objects, scene.resetAt]);
+  // One per connected Placer; cap render count defensively.
+  const visible = useMemo(
+    () => wireframes.slice(0, MAX_OBJECTS_RENDERED),
+    [wireframes],
+  );
 
   return (
     <>
-      {visible.map((o) => (
-        <PlacedMesh key={o.id} obj={o} />
+      {visible.map((w) => (
+        <PlacedMesh key={w.sessionId} obj={w} />
       ))}
     </>
   );
 }
 
-function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
+function PlacedMesh({ obj }: { obj: WireframeEntry }) {
   const groupRef = useRef<Group>(null);
   const matRef = useRef<LineBasicMaterial>(null);
   const baseColor = useMemo(() => new ThreeColor(obj.color), [obj.color]);
-  const seed = useMemo(() => hashStringToFloat(obj.id), [obj.id]);
+  const seed = useMemo(
+    () => hashStringToFloat(obj.sessionId),
+    [obj.sessionId],
+  );
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const t = clock.elapsedTime;
+    // basePosition is the live user-controlled position. Effects oscillate
+    // around it (drift offsets sin/cos around base; glitchJitter snaps to
+    // small random offsets from base, etc.) — same code, just basePosition
+    // updates continuously now instead of being a one-time random value.
     applyEffect({
       group: groupRef.current,
       material: matRef.current ?? null,

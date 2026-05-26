@@ -23,6 +23,13 @@
         ".validate": "newData.hasChildren(['sessionId', 'shape', 'color', 'position'])"
       }
     },
+    "wireframes": {
+      ".read": true,
+      ".write": true,
+      "$sessionId": {
+        ".validate": "newData.hasChildren(['shape', 'color', 'effect', 'position']) || !newData.exists()"
+      }
+    },
     "glitchers": {
       ".read": true,
       ".write": true,
