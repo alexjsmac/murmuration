@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Color as ThreeColor,
   type Group,
@@ -14,6 +14,7 @@ import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { audioLevel } from "@/hooks/useAudioLevel";
 import { flashLineColors, decayLineColors } from "@/lib/line-color";
+import { makeFlashable } from "@/lib/flashable-material";
 
 export function PlacedObjects() {
   const objects = useObjects();
@@ -56,6 +57,10 @@ function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
   const matRef = useRef<LineBasicMaterial>(null);
   const baseColor = useMemo(() => new ThreeColor(obj.color), [obj.color]);
   const seed = useMemo(() => hashStringToFloat(obj.id), [obj.id]);
+
+  useEffect(() => {
+    if (matRef.current) makeFlashable(matRef.current);
+  }, []);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { HeroKind } from "@/lib/presets";
 import { audioLevel } from "@/hooks/useAudioLevel";
@@ -10,11 +10,19 @@ import {
   decayLineColors,
   flashLineColors,
 } from "@/lib/line-color";
+import { makeFlashable } from "@/lib/flashable-material";
 
 const MORPH_AMP = 0.13;
 
 export function HeroMesh({ kind }: { kind: HeroKind }) {
   const groupRef = useRef<THREE.Group>(null);
+  const edgesMatRef = useRef<THREE.LineBasicMaterial>(null);
+  const meshMatRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  useEffect(() => {
+    if (edgesMatRef.current) makeFlashable(edgesMatRef.current);
+    if (meshMatRef.current) makeFlashable(meshMatRef.current);
+  }, []);
 
   const geometry = useMemo(() => {
     let g: THREE.BufferGeometry;
@@ -111,6 +119,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
     <group ref={groupRef}>
       <lineSegments geometry={edges}>
         <lineBasicMaterial
+          ref={edgesMatRef}
           color="#ff007a"
           vertexColors
           transparent
@@ -120,6 +129,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
       </lineSegments>
       <mesh geometry={geometry}>
         <meshBasicMaterial
+          ref={meshMatRef}
           color="#ff007a"
           wireframe
           vertexColors
