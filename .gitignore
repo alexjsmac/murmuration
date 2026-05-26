@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# firebase cli cache
+.firebase/
+
+# local claude code permissions (keep .claude/launch.json shared)
+.claude/settings.local.json
+
 # vercel
 .vercel
 

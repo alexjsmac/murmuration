@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "scene": {
+      ".read": true,
+      ".write": true,
+      "globalIntensity": {
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1"
+      },
+      "preset": {
+        ".validate": "newData.isString() && newData.val().length < 64"
+      },
+      "pause": {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+    "objects": {
+      ".read": true,
+      ".write": true,
+      "$objectId": {
+        ".validate": "newData.hasChildren(['sessionId', 'shape', 'color', 'position'])"
+      }
+    },
+    "glitchers": {
+      ".read": true,
+      ".write": true,
+      "$sessionId": {
+        ".validate": "newData.hasChildren(['position', 'intensity', 'hue']) || !newData.exists()"
+      }
+    },
+    "connections": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
