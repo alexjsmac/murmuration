@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Shape } from "./types";
+import { attachWhiteColors } from "./line-color";
 
 export const baseGeometries: Record<Shape, THREE.BufferGeometry> = {
   cube: new THREE.BoxGeometry(0.5, 0.5, 0.5),
@@ -16,3 +17,7 @@ export const edgesByShape: Record<Shape, THREE.EdgesGeometry> = {
   cone: new THREE.EdgesGeometry(baseGeometries.cone, 15),
   axisGizmo: new THREE.EdgesGeometry(baseGeometries.axisGizmo, 1),
 };
+
+// Add per-vertex color attribute so vertexColors materials can multiply
+// flash colors through the base color. White by default = no visual change.
+Object.values(edgesByShape).forEach(attachWhiteColors);

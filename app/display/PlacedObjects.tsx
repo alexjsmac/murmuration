@@ -13,16 +13,34 @@ import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { audioLevel } from "@/hooks/useAudioLevel";
+import { flashLineColors, decayLineColors } from "@/lib/line-color";
 
 export function PlacedObjects() {
   const objects = useObjects();
   const scene = useScene();
+  const lastSeenOnsetRef = useRef(0);
 
   const visible = useMemo(() => {
     return objects
       .filter((o) => !scene.resetAt || o.placedAt >= scene.resetAt - 1000)
       .slice(-MAX_OBJECTS_RENDERED);
   }, [objects, scene.resetAt]);
+
+  // Drive flash/decay on shared edge geometries once per frame — not
+  // per-PlacedMesh, since they share buffers. All instances of a given
+  // shape flash in sync, which reads as a unified shockwave per kick.
+  useFrame(() => {
+    if (audioLevel.lastBassOnset > lastSeenOnsetRef.current) {
+      lastSeenOnsetRef.current = audioLevel.lastBassOnset;
+      for (const geom of Object.values(edgesByShape)) {
+        flashLineColors(geom);
+      }
+    } else {
+      for (const geom of Object.values(edgesByShape)) {
+        decayLineColors(geom, 0.08);
+      }
+    }
+  });
 
   return (
     <>
@@ -90,6 +108,7 @@ function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
         <lineBasicMaterial
           ref={matRef}
           color={obj.color}
+          vertexColors
           transparent
           opacity={0.95}
         />

@@ -5,30 +5,65 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { HeroKind } from "@/lib/presets";
 import { audioLevel } from "@/hooks/useAudioLevel";
+import {
+  attachWhiteColors,
+  decayLineColors,
+  flashLineColors,
+} from "@/lib/line-color";
+
+const MORPH_AMP = 0.13;
 
 export function HeroMesh({ kind }: { kind: HeroKind }) {
   const groupRef = useRef<THREE.Group>(null);
 
   const geometry = useMemo(() => {
+    let g: THREE.BufferGeometry;
     switch (kind) {
       case "ico":
-        return new THREE.IcosahedronGeometry(1.5, 1);
+        g = new THREE.IcosahedronGeometry(1.5, 1);
+        break;
       case "torus":
-        return new THREE.TorusKnotGeometry(1.1, 0.35, 128, 16);
+        g = new THREE.TorusKnotGeometry(1.1, 0.35, 128, 16);
+        break;
       case "abstract":
-        return new THREE.OctahedronGeometry(1.6, 2);
+        g = new THREE.OctahedronGeometry(1.6, 2);
+        break;
       case "head":
       default:
-        return makeSpikyHead();
+        g = makeSpikyHead();
+        break;
     }
+    attachWhiteColors(g);
+    return g;
   }, [kind]);
 
-  const edges = useMemo(
-    () => new THREE.EdgesGeometry(geometry, 1),
-    [geometry],
-  );
+  const edges = useMemo(() => {
+    const e = new THREE.EdgesGeometry(geometry, 1);
+    attachWhiteColors(e);
+    return e;
+  }, [geometry]);
+
+  // Snapshot positions to morph against; per-vertex random unit direction
+  // gives each point its own wander axis. Recomputed when geometry changes.
+  const morphRefs = useMemo(() => {
+    const posAttr = geometry.attributes.position;
+    const count = posAttr.count;
+    const basePositions = new Float32Array(posAttr.array as Float32Array);
+    const randDirs = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const dx = Math.sin(i * 12.9898 + 0.5) * 2 - 1;
+      const dy = Math.sin(i * 78.233 + 1.3) * 2 - 1;
+      const dz = Math.sin(i * 43.5453 + 2.1) * 2 - 1;
+      const len = Math.hypot(dx, dy, dz) || 1;
+      randDirs[i * 3 + 0] = dx / len;
+      randDirs[i * 3 + 1] = dy / len;
+      randDirs[i * 3 + 2] = dz / len;
+    }
+    return { basePositions, randDirs };
+  }, [geometry]);
 
   const spinRef = useRef(0);
+  const lastSeenOnsetRef = useRef(0);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
@@ -36,14 +71,40 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
     const bass = audioLevel.bass;
     const overall = audioLevel.overall;
 
-    // Spin speed accelerates with overall energy
+    // Vertex morph — wander each point along its own random axis.
+    const posAttr = geometry.attributes.position;
+    const arr = posAttr.array as Float32Array;
+    const { basePositions, randDirs } = morphRefs;
+    for (let i = 0; i < posAttr.count; i++) {
+      const phase = i * 0.731;
+      const wobble = Math.sin(t * 1.4 + phase) * MORPH_AMP;
+      const o = i * 3;
+      arr[o + 0] = basePositions[o + 0] + randDirs[o + 0] * wobble;
+      arr[o + 1] = basePositions[o + 1] + randDirs[o + 1] * wobble;
+      arr[o + 2] = basePositions[o + 2] + randDirs[o + 2] * wobble;
+    }
+    posAttr.needsUpdate = true;
+
+    // Spin accelerates with overall energy
     spinRef.current += 0.18 * (1 + overall * 1.5) * (1 / 60);
     groupRef.current.rotation.y = spinRef.current;
     groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.2;
 
-    // Bass pulses the whole hero in/out around base scale
+    // Bass pulses the whole hero in/out
     const pulse = 1 + bass * 0.35;
     groupRef.current.scale.setScalar(pulse);
+
+    // Color flash on bass onset (both outer edges + inner wireframe).
+    // Hero owns its own edges + geometry color buffers (not shared), so
+    // we drive flash/decay here.
+    if (audioLevel.lastBassOnset > lastSeenOnsetRef.current) {
+      lastSeenOnsetRef.current = audioLevel.lastBassOnset;
+      flashLineColors(edges);
+      flashLineColors(geometry);
+    } else {
+      decayLineColors(edges, 0.07);
+      decayLineColors(geometry, 0.07);
+    }
   });
 
   return (
@@ -51,6 +112,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
       <lineSegments geometry={edges}>
         <lineBasicMaterial
           color="#ff007a"
+          vertexColors
           transparent
           opacity={0.95}
           depthTest
@@ -60,8 +122,9 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
         <meshBasicMaterial
           color="#ff007a"
           wireframe
+          vertexColors
           transparent
-          opacity={0.12}
+          opacity={0.16}
         />
       </mesh>
     </group>

@@ -19,6 +19,12 @@ export interface AudioLevel {
   mid: number;
   high: number;
   overall: number;
+  /**
+   * Monotonic timestamp (performance.now ms) of the most recent detected
+   * bass-drum onset. Consumers cache the last value they saw; when this
+   * exceeds their cached value, a new onset just fired.
+   */
+  lastBassOnset: number;
 }
 
 export const audioLevel: AudioLevel = {
@@ -26,6 +32,7 @@ export const audioLevel: AudioLevel = {
   mid: 0,
   high: 0,
   overall: 0,
+  lastBassOnset: 0,
 };
 
 /**
@@ -100,6 +107,12 @@ export function useAudioArm() {
       const buffer = new Uint8Array(analyser.frequencyBinCount);
       let raf = 0;
 
+      // Bass-onset state: spectral-flux detection on the gain-adjusted bass
+      // band with a rolling flux average + cooldown. Tuned for kick drums
+      // in electronic music (4/4, ~120-140 BPM = max ~3 onsets/sec).
+      let prevBass = 0;
+      let fluxAvg = 0.05;
+
       const tick = () => {
         analyser.getByteFrequencyData(buffer);
         // bin width @ 48 kHz / 1024 = ~47 Hz/bin
@@ -114,6 +127,20 @@ export function useAudioArm() {
         audioLevel.mid = mid;
         audioLevel.high = high;
         audioLevel.overall = (bass + mid + high) / 3;
+
+        // Onset detection
+        const flux = Math.max(0, bass - prevBass);
+        prevBass = bass;
+        fluxAvg = fluxAvg * 0.9 + flux * 0.1;
+        const now = performance.now();
+        if (
+          flux > fluxAvg * 1.8 &&
+          bass > 0.22 &&
+          now - audioLevel.lastBassOnset > 220
+        ) {
+          audioLevel.lastBassOnset = now;
+        }
+
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
