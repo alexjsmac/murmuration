@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   Color as ThreeColor,
   type Group,
@@ -13,35 +13,16 @@ import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { audioLevel } from "@/hooks/useAudioLevel";
-import { flashLineColors, decayLineColors } from "@/lib/line-color";
-import { makeFlashable } from "@/lib/flashable-material";
 
 export function PlacedObjects() {
   const objects = useObjects();
   const scene = useScene();
-  const lastSeenOnsetRef = useRef(0);
 
   const visible = useMemo(() => {
     return objects
       .filter((o) => !scene.resetAt || o.placedAt >= scene.resetAt - 1000)
       .slice(-MAX_OBJECTS_RENDERED);
   }, [objects, scene.resetAt]);
-
-  // Drive flash/decay on shared edge geometries once per frame — not
-  // per-PlacedMesh, since they share buffers. All instances of a given
-  // shape flash in sync, which reads as a unified shockwave per kick.
-  useFrame(() => {
-    if (audioLevel.lastBassOnset > lastSeenOnsetRef.current) {
-      lastSeenOnsetRef.current = audioLevel.lastBassOnset;
-      for (const geom of Object.values(edgesByShape)) {
-        flashLineColors(geom);
-      }
-    } else {
-      for (const geom of Object.values(edgesByShape)) {
-        decayLineColors(geom, 0.08);
-      }
-    }
-  });
 
   return (
     <>
@@ -58,10 +39,6 @@ function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
   const baseColor = useMemo(() => new ThreeColor(obj.color), [obj.color]);
   const seed = useMemo(() => hashStringToFloat(obj.id), [obj.id]);
 
-  useEffect(() => {
-    if (matRef.current) makeFlashable(matRef.current);
-  }, []);
-
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const t = clock.elapsedTime;
@@ -75,9 +52,8 @@ function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
       t,
     });
 
-    // Audio-reactive layer: stack on top of whatever the per-object effect set.
-    // Bass drives scale pulse + small position jitter per-object (per-seed phase
-    // so each wireframe moves on its own beat, not in unison).
+    // Audio-reactive layer: scale pulse + 3D position jitter from bass.
+    // Per-seed phase so objects don't move in unison.
     const bass = audioLevel.bass;
     if (bass > 0.02) {
       const pulse = 1 + bass * 0.55 * (0.6 + 0.4 * Math.sin(t * 6 + seed * 3.1));
@@ -113,7 +89,6 @@ function PlacedMesh({ obj }: { obj: PlacedObjectEntry }) {
         <lineBasicMaterial
           ref={matRef}
           color={obj.color}
-          vertexColors
           transparent
           opacity={0.95}
         />
