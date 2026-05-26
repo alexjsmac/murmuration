@@ -2,9 +2,6 @@
 
 A co-created live visual installation. Built in real time by the audience, anyone in the room can place wireframe objects into the scene or aim a beam of light through it from their phone. Every few minutes, the scene dissolves and starts again.
 
-**Live:** [murmuration-app.web.app](https://murmuration-app.web.app/)
-**Premieres:** Avant Mutek — Mooi Space, Toronto — May 30, 2026
-
 ---
 
 ## How it works
