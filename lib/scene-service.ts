@@ -18,6 +18,7 @@ export async function ensureSceneInitialized(): Promise<void> {
       resetAt: serverTimestamp(),
       presetSwitchAt: serverTimestamp(),
       globalIntensity: DEFAULT_SCENE_STATE.globalIntensity,
+      audioGain: DEFAULT_SCENE_STATE.audioGain,
       pause: false,
     });
   }
@@ -42,6 +43,12 @@ export async function setGlobalIntensity(value: number): Promise<void> {
   if (!realtimeDb) return;
   const clamped = Math.max(0, Math.min(1, value));
   await update(ref(realtimeDb, "scene"), { globalIntensity: clamped });
+}
+
+export async function setAudioGain(value: number): Promise<void> {
+  if (!realtimeDb) return;
+  const clamped = Math.max(0, Math.min(5, value));
+  await update(ref(realtimeDb, "scene"), { audioGain: clamped });
 }
 
 export async function setPause(pause: boolean): Promise<void> {

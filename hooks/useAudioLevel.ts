@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ref, onValue } from "firebase/database";
+import { realtimeDb } from "@/lib/firebase-config";
+import { DEFAULT_SCENE_STATE } from "@/lib/types";
 
 /**
  * Audio-reactivity foundation.
@@ -25,6 +28,13 @@ export const audioLevel: AudioLevel = {
   overall: 0,
 };
 
+/**
+ * Audio gain multiplier, synced from /scene/audioGain (admin-tunable on-site).
+ * Module-level so the rAF tick can read it without React state.
+ * Capped 0..5; applied to all bands then clamped to 1 to keep consumers sane.
+ */
+const audioGainRef = { current: DEFAULT_SCENE_STATE.audioGain };
+
 interface ArmState {
   isArmed: boolean;
   isSupported: boolean;
@@ -48,6 +58,20 @@ export function useAudioArm() {
     ) {
       setState((s) => ({ ...s, isSupported: false }));
     }
+  }, []);
+
+  // Subscribe to /scene/audioGain live so admin slider edits propagate
+  // to the running tick without needing to re-arm the mic.
+  useEffect(() => {
+    if (!realtimeDb) return;
+    const gainPath = ref(realtimeDb, "scene/audioGain");
+    const unsub = onValue(gainPath, (snap) => {
+      const v = snap.val();
+      if (typeof v === "number") {
+        audioGainRef.current = v;
+      }
+    });
+    return () => unsub();
   }, []);
 
   const arm = useCallback(async (): Promise<boolean> => {
@@ -82,9 +106,10 @@ export function useAudioArm() {
         //   bass:  ~95-470 Hz (bins 2-10)
         //   mid:   ~470-2350 Hz (bins 10-50)
         //   high:  ~2350-9400 Hz (bins 50-200)
-        const bass = avg(buffer, 2, 10) / 255;
-        const mid = avg(buffer, 10, 50) / 255;
-        const high = avg(buffer, 50, 200) / 255;
+        const gain = audioGainRef.current;
+        const bass = Math.min(1, (avg(buffer, 2, 10) / 255) * gain);
+        const mid = Math.min(1, (avg(buffer, 10, 50) / 255) * gain);
+        const high = Math.min(1, (avg(buffer, 50, 200) / 255) * gain);
         audioLevel.bass = bass;
         audioLevel.mid = mid;
         audioLevel.high = high;

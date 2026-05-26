@@ -6,6 +6,9 @@
       "globalIntensity": {
         ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1"
       },
+      "audioGain": {
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5"
+      },
       "preset": {
         ".validate": "newData.isString() && newData.val().length < 64"
       },

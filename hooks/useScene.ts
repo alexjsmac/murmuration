@@ -23,6 +23,10 @@ export function useScene(): SceneState {
           typeof v.globalIntensity === "number"
             ? v.globalIntensity
             : DEFAULT_SCENE_STATE.globalIntensity,
+        audioGain:
+          typeof v.audioGain === "number"
+            ? v.audioGain
+            : DEFAULT_SCENE_STATE.audioGain,
         pause: !!v.pause,
       });
     });

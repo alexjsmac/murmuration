@@ -84,6 +84,7 @@ export interface SceneState {
   resetAt: number;
   presetSwitchAt: number;
   globalIntensity: number;
+  audioGain: number;
   pause: boolean;
 }
 
@@ -92,5 +93,6 @@ export const DEFAULT_SCENE_STATE: SceneState = {
   resetAt: 0,
   presetSwitchAt: 0,
   globalIntensity: 0.4,
+  audioGain: 1.0,
   pause: false,
 };

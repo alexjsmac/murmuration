@@ -6,6 +6,7 @@ import { useGlitchers } from "@/hooks/useGlitchers";
 import { useObjects } from "@/hooks/useObjects";
 import { useNow } from "@/hooks/useNow";
 import {
+  setAudioGain,
   setGlobalIntensity,
   setPause,
   setPreset,
@@ -180,6 +181,29 @@ function Dashboard() {
           }
           className="w-full accent-magenta"
         />
+      </section>
+
+      <section className="mb-6">
+        <div className="flex justify-between items-baseline mb-1">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+            Audio Gain
+          </p>
+          <p className="text-xs font-mono">
+            {scene.audioGain.toFixed(2)}&times;
+          </p>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={0.05}
+          value={scene.audioGain}
+          onChange={(e) => setAudioGain(parseFloat(e.target.value))}
+          className="w-full accent-cyan"
+        />
+        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40 mt-1">
+          1.00&times; = raw mic. Crank up if mic is quiet or the room is dead.
+        </p>
       </section>
 
       <section className="mb-6">
