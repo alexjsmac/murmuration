@@ -12,7 +12,6 @@ import {
   setPreset,
   triggerReset,
 } from "@/lib/scene-service";
-import { clearAllWireframes } from "@/lib/object-service";
 import { PRESETS, ROUND_DURATION_MS } from "@/lib/presets";
 import { ref, onValue, remove } from "firebase/database";
 import { realtimeDb } from "@/lib/firebase-config";
@@ -111,13 +110,14 @@ function Dashboard() {
           >
             [ Force Reset ]
           </button>
-          <button
-            type="button"
-            onClick={() => clearAllWireframes()}
-            className="flex-1 border border-foreground/20 hover:border-foreground/50 px-4 py-3 uppercase tracking-[0.3em] text-xs"
+          <a
+            href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/database/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb/data/wireframes`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 border border-foreground/20 hover:border-foreground/50 px-4 py-3 uppercase tracking-[0.3em] text-xs text-center"
           >
-            [ Clear Wireframes ]
-          </button>
+            [ Console: Wireframes ]
+          </a>
         </Row>
         <Row>
           <button

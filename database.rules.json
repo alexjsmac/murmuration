@@ -18,28 +18,27 @@
     },
     "objects": {
       ".read": true,
-      ".write": true,
-      "$objectId": {
-        ".validate": "newData.hasChildren(['sessionId', 'shape', 'color', 'position'])"
-      }
+      ".write": false
     },
     "wireframes": {
       ".read": true,
-      ".write": true,
       "$sessionId": {
+        ".write": "auth != null && auth.uid == $sessionId",
         ".validate": "newData.hasChildren(['shape', 'color', 'effect', 'position']) || !newData.exists()"
       }
     },
     "glitchers": {
       ".read": true,
-      ".write": true,
       "$sessionId": {
+        ".write": "auth != null && auth.uid == $sessionId",
         ".validate": "newData.hasChildren(['position', 'intensity', 'hue']) || !newData.exists()"
       }
     },
     "connections": {
       ".read": true,
-      ".write": true
+      "$sessionId": {
+        ".write": "auth != null && auth.uid == $sessionId"
+      }
     }
   }
 }

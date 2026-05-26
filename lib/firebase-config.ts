@@ -1,5 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getDatabase, type Database } from "firebase/database";
+import { getAuth, type Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -18,11 +19,13 @@ const hasFirebaseConfig =
 
 let app: FirebaseApp | undefined;
 let realtimeDb: Database | undefined;
+let auth: Auth | undefined;
 
 if (hasFirebaseConfig) {
   app =
     getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   realtimeDb = getDatabase(app);
+  auth = getAuth(app);
 }
 
-export { app, realtimeDb };
+export { app, realtimeDb, auth };
