@@ -6,6 +6,8 @@ import {
   Scanline,
   Vignette,
   Glitch,
+  Bloom,
+  N8AO,
 } from "@react-three/postprocessing";
 import { GlitchMode } from "postprocessing";
 import { Vector2 } from "three";
@@ -23,7 +25,7 @@ export function PostProcess() {
   }, [glitchers, scene.globalIntensity]);
 
   const chromaOffset = useMemo(
-    () => new Vector2(0.0008 + intensity * 0.012, 0),
+    () => new Vector2(0.0016 + intensity * 0.014, 0),
     [intensity],
   );
 
@@ -36,8 +38,26 @@ export function PostProcess() {
   const glitchDuration = useMemo(() => new Vector2(0.1, 0.3), []);
 
   return (
-    <EffectComposer>
-      <ChromaticAberration offset={chromaOffset} radialModulation={false} modulationOffset={0} />
+    <EffectComposer multisampling={0}>
+      <N8AO
+        halfRes
+        aoRadius={1.2}
+        intensity={1.4}
+        quality="medium"
+        color="#000000"
+      />
+      <ChromaticAberration
+        offset={chromaOffset}
+        radialModulation={false}
+        modulationOffset={0}
+      />
+      <Bloom
+        intensity={2.6}
+        luminanceThreshold={0.25}
+        luminanceSmoothing={0.5}
+        mipmapBlur
+        radius={0.85}
+      />
       <Scanline density={1.6} opacity={0.06 + intensity * 0.1} />
       <Glitch
         delay={glitchDelay}

@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Grid } from "@react-three/drei";
+import { Grid, Sparkles } from "@react-three/drei";
 import { Suspense } from "react";
 import { CameraRig } from "./CameraRig";
 import { HeroMesh } from "./HeroMesh";
@@ -51,6 +51,15 @@ export function Scene() {
         <AxisGizmoProp />
         <PlacedObjects />
         <Glitchers />
+        <Sparkles
+          count={140}
+          scale={[24, 8, 24]}
+          size={2.4}
+          speed={0.25}
+          color="#ff3df0"
+          noise={1.2}
+          opacity={0.6}
+        />
       </Suspense>
 
       <PostProcess />

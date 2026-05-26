@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { updateGlitcher, removeGlitcher } from "@/lib/glitcher-service";
 import { GLITCHER_THROTTLE_MS } from "@/lib/presets";
-import { PALETTE } from "@/lib/types";
+import { useIdentity } from "@/hooks/useIdentity";
 
 export function GlitcherMode({ sessionId }: { sessionId: string }) {
-  const [hue, setHue] = useState<string>(PALETTE[1]);
+  const hue = useIdentity(sessionId);
   const [held, setHeld] = useState(false);
   const [aimDisplay, setAimDisplay] = useState({ x: 0, y: 0 });
   const [intensityDisplay, setIntensityDisplay] = useState(0);
@@ -105,28 +105,6 @@ export function GlitcherMode({ sessionId }: { sessionId: string }) {
               }}
             />
           </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40 mb-2">
-          Hue
-        </p>
-        <div className="grid grid-cols-6 gap-2">
-          {PALETTE.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setHue(c)}
-              aria-label={`Hue ${c}`}
-              className={`aspect-square border-2 transition-all ${
-                hue === c
-                  ? "border-foreground scale-110"
-                  : "border-transparent"
-              }`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
         </div>
       </section>
 

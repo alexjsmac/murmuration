@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/useSession";
+import { useIdentity } from "@/hooks/useIdentity";
 import { connect, setMode, disconnect } from "@/lib/connection-manager";
 import type { Mode } from "@/lib/types";
 import { PlacerMode } from "./PlacerMode";
@@ -61,7 +62,11 @@ export default function PlayPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <Header mode={mode} onChangeMode={() => setLocalMode(null)} />
+      <Header
+        mode={mode}
+        sessionId={sessionId}
+        onChangeMode={() => setLocalMode(null)}
+      />
       {mode === "placer" ? (
         <PlacerMode sessionId={sessionId} />
       ) : (
@@ -139,14 +144,17 @@ function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
 
 function Header({
   mode,
+  sessionId,
   onChangeMode,
 }: {
   mode: Mode;
+  sessionId: string;
   onChangeMode: () => void;
 }) {
   const isPlacer = mode === "placer";
+  const identity = useIdentity(sessionId);
   return (
-    <header className="flex items-center justify-between p-4 border-b border-foreground/10">
+    <header className="flex items-center justify-between p-4 border-b border-foreground/10 gap-3">
       <div className="flex items-center gap-2">
         <span
           className={`w-2 h-2 rounded-full ${isPlacer ? "bg-magenta" : "bg-cyan"} animate-pulse`}
@@ -154,6 +162,16 @@ function Header({
         <p className="text-xs uppercase tracking-[0.3em]">
           [ {isPlacer ? "PLACER" : "GLITCHER"} ]
         </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+          You
+        </p>
+        <span
+          className="w-4 h-4 border border-foreground/30"
+          style={{ backgroundColor: identity }}
+          aria-label={`Your identity color: ${identity}`}
+        />
       </div>
       <button
         type="button"
