@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { AudioArm } from "./AudioArm";
 
 const Scene = dynamic(() => import("./Scene").then((m) => m.Scene), {
   ssr: false,
@@ -15,6 +16,7 @@ export default function DisplayPage() {
   return (
     <main className="fixed inset-0 bg-black overflow-hidden">
       <Scene />
+      <AudioArm />
     </main>
   );
 }

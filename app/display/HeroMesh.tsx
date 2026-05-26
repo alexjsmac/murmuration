@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { HeroKind } from "@/lib/presets";
+import { audioLevel } from "@/hooks/useAudioLevel";
 
 export function HeroMesh({ kind }: { kind: HeroKind }) {
   const groupRef = useRef<THREE.Group>(null);
@@ -27,11 +28,22 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
     [geometry],
   );
 
+  const spinRef = useRef(0);
+
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const t = clock.elapsedTime;
-    groupRef.current.rotation.y = t * 0.18;
+    const bass = audioLevel.bass;
+    const overall = audioLevel.overall;
+
+    // Spin speed accelerates with overall energy
+    spinRef.current += 0.18 * (1 + overall * 1.5) * (1 / 60);
+    groupRef.current.rotation.y = spinRef.current;
     groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.2;
+
+    // Bass pulses the whole hero in/out around base scale
+    const pulse = 1 + bass * 0.35;
+    groupRef.current.scale.setScalar(pulse);
   });
 
   return (
