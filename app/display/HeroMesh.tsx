@@ -36,6 +36,12 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
       case "abstract":
         g = new THREE.OctahedronGeometry(1.6, 2);
         break;
+      case "spiral":
+        g = makeSpiral();
+        break;
+      case "lattice":
+        g = makeLattice();
+        break;
       case "head":
       default:
         g = makeSpikyHead();
@@ -155,4 +161,16 @@ function makeSpikyHead(): THREE.BufferGeometry {
   }
   geom.computeVertexNormals();
   return geom;
+}
+
+/** Helical coil — radius pulses outward at top + bottom. */
+function makeSpiral(): THREE.BufferGeometry {
+  // Two-tube torus knot variant tuned to read as a vertical spiral.
+  const geom = new THREE.TorusKnotGeometry(1.0, 0.18, 220, 12, 5, 1);
+  return geom;
+}
+
+/** Subdivided box — wireframe naturally reads as a 3D lattice/grid. */
+function makeLattice(): THREE.BufferGeometry {
+  return new THREE.BoxGeometry(2.6, 2.6, 2.6, 4, 4, 4);
 }

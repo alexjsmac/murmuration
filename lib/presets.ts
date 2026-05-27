@@ -1,4 +1,10 @@
-export type HeroKind = "head" | "ico" | "torus" | "abstract";
+export type HeroKind =
+  | "head"
+  | "ico"
+  | "torus"
+  | "abstract"
+  | "spiral"
+  | "lattice";
 
 export interface Preset {
   id: string;
@@ -12,6 +18,8 @@ export const PRESETS: Preset[] = [
   { id: "ico_v1", label: "ICO", hero: "ico", cameraDistance: 6 },
   { id: "torus_v1", label: "TORUS", hero: "torus", cameraDistance: 6.5 },
   { id: "abstract_v1", label: "ABSTRACT", hero: "abstract", cameraDistance: 7 },
+  { id: "spiral_v1", label: "SPIRAL", hero: "spiral", cameraDistance: 7 },
+  { id: "lattice_v1", label: "LATTICE", hero: "lattice", cameraDistance: 7.5 },
 ];
 
 export const ROUND_DURATION_MS = 4 * 60 * 1000;
