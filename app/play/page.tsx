@@ -1,96 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "@/hooks/useSession";
-import { useIdentity } from "@/hooks/useIdentity";
-import { connect, setMode, disconnect } from "@/lib/connection-manager";
+import dynamic from "next/dynamic";
+import { useState } from "react";
 import type { Mode } from "@/lib/types";
-import { PlacerMode } from "./PlacerMode";
-import { GlitcherMode } from "./GlitcherMode";
-import { realtimeDb } from "@/lib/firebase-config";
+
+// ActiveSession pulls in Firebase + PlacerMode + GlitcherMode.
+// Lazy-loading keeps ~246KB of Firebase Auth JS off the initial /play
+// paint — the QR-scanner sees the mode picker instantly while Firebase
+// loads in the background after their first tap.
+const ActiveSession = dynamic(
+  () => import("./ActiveSession").then((m) => m.ActiveSession),
+  {
+    ssr: false,
+    loading: () => <FullStatus label="LOADING" />,
+  },
+);
 
 export default function PlayPage() {
-  const sessionId = useSession();
-  const [mode, setLocalMode] = useState<Mode | null>(null);
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    if (!sessionId || !mode) return;
-    if (!realtimeDb) {
-      console.warn("Firebase not configured");
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      if (!connected) {
-        await connect(sessionId, mode);
-        if (!cancelled) setConnected(true);
-      } else {
-        await setMode(sessionId, mode);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId, mode, connected]);
-
-  useEffect(() => {
-    if (!sessionId) return;
-    const handleUnload = () => {
-      disconnect(sessionId);
-    };
-    window.addEventListener("pagehide", handleUnload);
-    return () => window.removeEventListener("pagehide", handleUnload);
-  }, [sessionId]);
-
-  if (!sessionId) {
-    return <FullStatus label="INITIALIZING" />;
-  }
-
-  if (!realtimeDb) {
-    return (
-      <FullStatus
-        label="OFFLINE"
-        sublabel="Firebase env not configured. See .env.local.example."
-      />
-    );
-  }
+  const [mode, setMode] = useState<Mode | null>(null);
 
   if (!mode) {
-    return <ModePicker onPick={setLocalMode} />;
+    return <ModePicker onPick={setMode} />;
   }
-
   return (
-    <div className="flex-1 flex flex-col">
-      <Header
-        mode={mode}
-        sessionId={sessionId}
-        onChangeMode={() => setLocalMode(null)}
-      />
-      {mode === "placer" ? (
-        <PlacerMode sessionId={sessionId} />
-      ) : (
-        <GlitcherMode sessionId={sessionId} />
-      )}
-    </div>
+    <ActiveSession mode={mode} onChangeMode={() => setMode(null)} />
   );
 }
 
-function FullStatus({
-  label,
-  sublabel,
-}: {
-  label: string;
-  sublabel?: string;
-}) {
+function FullStatus({ label }: { label: string }) {
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-2">
       <p className="text-magenta text-xs uppercase tracking-[0.4em]">
         {label}
       </p>
-      {sublabel && (
-        <p className="text-foreground/50 text-xs max-w-xs">{sublabel}</p>
-      )}
     </main>
   );
 }
@@ -139,47 +81,5 @@ function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
         SYSTEM::ONLINE
       </p>
     </main>
-  );
-}
-
-function Header({
-  mode,
-  sessionId,
-  onChangeMode,
-}: {
-  mode: Mode;
-  sessionId: string;
-  onChangeMode: () => void;
-}) {
-  const isPlacer = mode === "placer";
-  const identity = useIdentity(sessionId);
-  return (
-    <header className="flex items-center justify-between p-4 border-b border-foreground/10 gap-3">
-      <div className="flex items-center gap-2">
-        <span
-          className={`w-2 h-2 rounded-full ${isPlacer ? "bg-magenta" : "bg-cyan"} animate-pulse`}
-        />
-        <p className="text-xs uppercase tracking-[0.3em]">
-          [ {isPlacer ? "PLACER" : "GLITCHER"} ]
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40">
-          You
-        </p>
-        <span
-          className="w-4 h-4 border border-foreground/30"
-          style={{ backgroundColor: identity }}
-          aria-label={`Your identity color: ${identity}`}
-        />
-      </div>
-      <button
-        type="button"
-        onClick={onChangeMode}
-        className="text-[10px] uppercase tracking-[0.3em] text-foreground/50 hover:text-foreground"
-      >
-        Change
-      </button>
-    </header>
   );
 }

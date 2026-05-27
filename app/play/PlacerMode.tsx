@@ -17,7 +17,10 @@ import {
   type Shape,
 } from "@/lib/types";
 import { GLITCHER_THROTTLE_MS, ROUND_DURATION_MS } from "@/lib/presets";
-import { extractEdgeSegments } from "@/lib/image-to-edges";
+
+// image-to-edges is only loaded on first selfie upload to keep the /play
+// initial JS payload smaller (it pulls in canvas/ImageData utilities that
+// aren't otherwise needed).
 
 const DEFAULT_SHAPE: Shape = "ico";
 const DEFAULT_COLOR = PALETTE[0];
@@ -130,6 +133,9 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     if (!sessionId) return;
     setSelfieState("processing");
     try {
+      // Lazy import — keeps Canvas/ImageData-using code out of the initial
+      // /play bundle so first-load on cellular is faster.
+      const { extractEdgeSegments } = await import("@/lib/image-to-edges");
       const segments = await extractEdgeSegments(file);
       if (segments.length === 0) {
         setSelfieState("error");
