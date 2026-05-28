@@ -12,9 +12,17 @@ import {
 } from "@/lib/line-color";
 import { makeFlashable } from "@/lib/flashable-material";
 
-const MORPH_AMP = 0.13;
-
-export function HeroMesh({ kind }: { kind: HeroKind }) {
+export function HeroMesh({
+  kind,
+  color,
+  morphAmp,
+  spinSpeed,
+}: {
+  kind: HeroKind;
+  color: string;
+  morphAmp: number;
+  spinSpeed: number;
+}) {
   const groupRef = useRef<THREE.Group>(null);
   const edgesMatRef = useRef<THREE.LineBasicMaterial>(null);
   const meshMatRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -91,7 +99,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
     const { basePositions, randDirs } = morphRefs;
     for (let i = 0; i < posAttr.count; i++) {
       const phase = i * 0.731;
-      const wobble = Math.sin(t * 1.4 + phase) * MORPH_AMP;
+      const wobble = Math.sin(t * 1.4 + phase) * morphAmp;
       const o = i * 3;
       arr[o + 0] = basePositions[o + 0] + randDirs[o + 0] * wobble;
       arr[o + 1] = basePositions[o + 1] + randDirs[o + 1] * wobble;
@@ -99,8 +107,8 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
     }
     posAttr.needsUpdate = true;
 
-    // Spin accelerates with overall energy
-    spinRef.current += 0.18 * (1 + overall * 1.5) * (1 / 60);
+    // Spin accelerates with overall audio energy.
+    spinRef.current += spinSpeed * (1 + overall * 1.5) * (1 / 60);
     groupRef.current.rotation.y = spinRef.current;
     groupRef.current.rotation.x = Math.sin(t * 0.1) * 0.2;
 
@@ -126,7 +134,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
       <lineSegments geometry={edges}>
         <lineBasicMaterial
           ref={edgesMatRef}
-          color="#ff007a"
+          color={color}
           vertexColors
           transparent
           opacity={0.95}
@@ -136,7 +144,7 @@ export function HeroMesh({ kind }: { kind: HeroKind }) {
       <mesh geometry={geometry}>
         <meshBasicMaterial
           ref={meshMatRef}
-          color="#ff007a"
+          color={color}
           wireframe
           vertexColors
           transparent

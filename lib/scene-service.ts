@@ -33,9 +33,13 @@ export async function triggerReset(): Promise<void> {
 
 export async function setPreset(presetId: string): Promise<void> {
   if (!realtimeDb) return;
+  // Also reset the round timer — otherwise an admin pick can be immediately
+  // overridden by the next auto-rotation tick if the round was nearly done.
+  // Operator's intent: "I want THIS preset for the next round."
   await update(ref(realtimeDb, "scene"), {
     preset: presetId,
     presetSwitchAt: serverTimestamp(),
+    resetAt: serverTimestamp(),
   });
 }
 

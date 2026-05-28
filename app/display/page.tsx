@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { AudioArm } from "./AudioArm";
+import { JoinQR } from "./JoinQR";
 
 const Scene = dynamic(() => import("./Scene").then((m) => m.Scene), {
   ssr: false,
@@ -17,6 +18,7 @@ export default function DisplayPage() {
     <main className="fixed inset-0 bg-black overflow-hidden">
       <Scene />
       <AudioArm />
+      <JoinQR />
     </main>
   );
 }

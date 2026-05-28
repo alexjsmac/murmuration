@@ -57,7 +57,12 @@ export function PromoScene() {
       />
 
       <Suspense fallback={null}>
-        <HeroMesh kind={preset.hero} />
+        <HeroMesh
+          kind={preset.hero}
+          color={preset.heroColor}
+          morphAmp={preset.morphAmp}
+          spinSpeed={preset.heroSpinSpeed}
+        />
         <AxisGizmoProp />
         <PromoDecor />
         <PromoBeam />
