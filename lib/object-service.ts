@@ -51,6 +51,7 @@ export async function updateWireframeFields(
     rotation: Position3;
     dragging: boolean;
     faceMesh: number[] | null;
+    faceShade: number[] | null;
   }>,
 ): Promise<void> {
   if (!realtimeDb) return;

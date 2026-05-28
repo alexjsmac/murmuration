@@ -95,6 +95,13 @@ export interface Wireframe {
    * (lib/face-mesh-topology.ts), giving the wireframe real 3D depth.
    */
   faceMesh?: number[];
+  /**
+   * Parallel to faceMesh: 478 per-vertex luminance values (0..1) sampled from
+   * the selfie on the phone, letting the display shade each face with its real
+   * light/shadow instead of generic depth. A coarse grayscale of the face —
+   * never the image — leaves the phone.
+   */
+  faceShade?: number[];
   joinedAt: number;
 }
 

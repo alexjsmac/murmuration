@@ -87,16 +87,19 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
 
   // Face geometry — built on-demand from the user's uploaded MediaPipe
   // landmarks. Two indexed line layers over the same 478 points: a dim full
-  // tessellation net and bright feature contours. A per-vertex grayscale
-  // depth attribute (nearer = brighter) gives the scan readable relief even
-  // before it sways. Only rebuilt when the points actually change — useObjects
-  // preserves the faceMesh array reference across position-only drag updates,
-  // so dragging a face never rebuilds its ~2,500 GPU edges.
+  // tessellation net and bright feature contours. The per-vertex grayscale
+  // attribute carries the face's sampled luminance (real light/shadow, so
+  // different people look different), with depth as a light secondary
+  // multiplier; it falls back to depth-only when no luminance was sent. Only
+  // rebuilt when the points/shade change — useObjects preserves both array
+  // references across position-only drag updates, so dragging never rebuilds.
   const faceGeometry = useMemo(() => {
     if (obj.shape !== "selfie" || !obj.faceMesh?.length) return null;
     const positions = new Float32Array(obj.faceMesh);
     const vcount = positions.length / 3;
+    const shade = obj.faceShade?.length === vcount ? obj.faceShade : null;
 
+    // Depth range → relief cue (1 = nearest).
     let zmin = Infinity;
     let zmax = -Infinity;
     for (let i = 0; i < vcount; i++) {
@@ -104,18 +107,38 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
       if (z < zmin) zmin = z;
       if (z > zmax) zmax = z;
     }
-    const span = zmax - zmin || 1;
+    const zspan = zmax - zmin || 1;
 
-    // Grayscale (d,d,d) so final color = material.color (tint) × d. Keeping
-    // the tint out of the vertex color lets colorPulse's material.color
-    // modulation work without squaring the hue.
+    // Per-face luminance range for a contrast stretch, so dark and bright
+    // selfies both read through the bloom.
+    let lmin = Infinity;
+    let lmax = -Infinity;
+    if (shade) {
+      for (let i = 0; i < vcount; i++) {
+        const l = shade[i];
+        if (l < lmin) lmin = l;
+        if (l > lmax) lmax = l;
+      }
+    }
+    const lspan = lmax - lmin || 1;
+
+    // Grayscale (b,b,b) so final color = material.color (tint) × b — keeping
+    // the tint out of the vertex color lets colorPulse modulate the material
+    // without squaring the hue.
     const colors = new Float32Array(vcount * 3);
     for (let i = 0; i < vcount; i++) {
-      const tnorm = (positions[i * 3 + 2] - zmin) / span; // 0 = nearest
-      const d = 1.2 - 0.75 * tnorm; // nearer = brighter (1.2 .. 0.45)
-      colors[i * 3] = d;
-      colors[i * 3 + 1] = d;
-      colors[i * 3 + 2] = d;
+      const depthNorm = 1 - (positions[i * 3 + 2] - zmin) / zspan; // 1 = nearest
+      let b: number;
+      if (shade) {
+        const ln = (shade[i] - lmin) / lspan; // 0..1 within this face
+        const lum = 0.35 + 0.8 * ln; // 0.35 .. 1.15
+        b = lum * (0.85 + 0.15 * depthNorm); // depth as a gentle modulation
+      } else {
+        b = 0.45 + 0.75 * depthNorm; // depth-only fallback (0.45 .. 1.2)
+      }
+      colors[i * 3] = b;
+      colors[i * 3 + 1] = b;
+      colors[i * 3 + 2] = b;
     }
 
     const make = (index: number[]) => {
@@ -127,7 +150,7 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
     };
 
     return { tess: make(TESSELATION_INDEX), contour: make(CONTOURS_INDEX) };
-  }, [obj.shape, obj.faceMesh]);
+  }, [obj.shape, obj.faceMesh, obj.faceShade]);
 
   // Dispose both layers on swap/unmount to avoid GPU buffer leaks.
   useEffect(() => {

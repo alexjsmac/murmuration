@@ -82,17 +82,29 @@ async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
 
 /**
  * Run MediaPipe Face Landmarker on a captured selfie and return the 478
- * landmarks as a flat [x, y, z, ...] array in scene space, or null when no
- * face is detected. Only these abstract coordinates ever leave the phone —
- * the photo itself is never uploaded or stored.
+ * landmarks (flat [x, y, z, ...] in scene space) plus a parallel per-vertex
+ * luminance array (0..1) sampled from the photo, or null when no face is
+ * detected. Only these abstract values leave the phone — the 3D coordinates
+ * and a coarse 478-point grayscale — never the image itself, which is neither
+ * uploaded nor stored.
  */
-export async function extractFaceMesh(file: File): Promise<number[] | null> {
+export async function extractFaceMesh(
+  file: File,
+): Promise<{ points: number[]; shade: number[] } | null> {
   const landmarker = await silencingTfliteInfo(() => getLandmarker());
   const canvas = await fileToCanvas(file);
   const landmarks = await silencingTfliteInfo(
     () => landmarker.detect(canvas).faceLandmarks?.[0],
   );
   if (!landmarks || landmarks.length === 0) return null;
+
+  // Sample the (downscaled) selfie's luminance at each landmark so the display
+  // can shade the mesh with the face's real light/shadow. landmark x/y are
+  // 0..1, mapping straight onto the canvas; sampled on the raw coords since
+  // luminance is orientation-independent.
+  const w = canvas.width;
+  const h = canvas.height;
+  const pixels = canvas.getContext("2d")?.getImageData(0, 0, w, h).data;
 
   // Recenter on the face centroid so it sits at the object's local origin.
   const n = landmarks.length;
@@ -108,13 +120,27 @@ export async function extractFaceMesh(file: File): Promise<number[] | null> {
   cy /= n;
   cz /= n;
 
-  const out: number[] = [];
+  const points: number[] = [];
+  const shade: number[] = [];
   for (const p of landmarks) {
-    out.push(
+    points.push(
       -(p.x - cx) * FACE_SCALE, // mirror X for a natural selfie
       -(p.y - cy) * FACE_SCALE, // flip Y: image-down → scene-up
       (p.z - cz) * FACE_SCALE * Z_GAIN, // amplified depth
     );
+
+    let luma = 1;
+    if (pixels) {
+      const px = Math.min(w - 1, Math.max(0, Math.round(p.x * (w - 1))));
+      const py = Math.min(h - 1, Math.max(0, Math.round(p.y * (h - 1))));
+      const i = (py * w + px) * 4;
+      luma =
+        (0.2126 * pixels[i] +
+          0.7152 * pixels[i + 1] +
+          0.0722 * pixels[i + 2]) /
+        255;
+    }
+    shade.push(Math.round(luma * 1000) / 1000);
   }
-  return out;
+  return { points, shade };
 }

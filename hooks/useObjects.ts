@@ -31,6 +31,10 @@ export function useObjects(): WireframeEntry[] {
   // ~2,500 GPU edges on every drag tick. Only ever touched inside this
   // callback, never during render.
   const prevMeshes = useRef<Record<string, number[] | undefined>>({});
+  // faceShade changes only on re-upload, in lockstep with faceMesh — preserve
+  // its reference too so the geometry memo (which depends on it) doesn't rebuild
+  // on position-only drag updates.
+  const prevShades = useRef<Record<string, number[] | undefined>>({});
 
   useEffect(() => {
     if (!realtimeDb) return;
@@ -39,20 +43,29 @@ export function useObjects(): WireframeEntry[] {
       const v = snap.val() as Record<string, Wireframe> | null;
       if (!v) {
         prevMeshes.current = {};
+        prevShades.current = {};
         setWireframes([]);
         return;
       }
       const nextMeshes: Record<string, number[] | undefined> = {};
+      const nextShades: Record<string, number[] | undefined> = {};
       const entries = Object.entries(v).map(([sessionId, wf]) => {
-        const prev = prevMeshes.current[sessionId];
+        const prevMesh = prevMeshes.current[sessionId];
         const faceMesh =
-          wf.faceMesh && prev && sameNumbers(prev, wf.faceMesh)
-            ? prev
+          wf.faceMesh && prevMesh && sameNumbers(prevMesh, wf.faceMesh)
+            ? prevMesh
             : wf.faceMesh;
         nextMeshes[sessionId] = faceMesh;
-        return { sessionId, ...wf, faceMesh };
+        const prevShade = prevShades.current[sessionId];
+        const faceShade =
+          wf.faceShade && prevShade && sameNumbers(prevShade, wf.faceShade)
+            ? prevShade
+            : wf.faceShade;
+        nextShades[sessionId] = faceShade;
+        return { sessionId, ...wf, faceMesh, faceShade };
       });
       prevMeshes.current = nextMeshes;
+      prevShades.current = nextShades;
       setWireframes(entries);
     });
     return () => unsub();

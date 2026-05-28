@@ -91,7 +91,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!sessionId) return;
     if (shape !== "selfie") {
-      updateWireframeFields(sessionId, { faceMesh: null });
+      updateWireframeFields(sessionId, { faceMesh: null, faceShade: null });
     }
   }, [sessionId, shape]);
 
@@ -139,14 +139,15 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
       // Lazy import — keeps the MediaPipe wrapper out of the /play initial
       // bundle (its own chunk; wasm + model fetched same-origin on first use).
       const { extractFaceMesh } = await import("@/lib/image-to-facemesh");
-      const pts = await extractFaceMesh(file); // null when no face is found
-      if (!pts) {
+      const res = await extractFaceMesh(file); // null when no face is found
+      if (!res) {
         setSelfieState("noface");
         return;
       }
       await updateWireframeFields(sessionId, {
         shape: "selfie",
-        faceMesh: pts,
+        faceMesh: res.points,
+        faceShade: res.shade,
       });
       setShape("selfie");
       setSelfieState("ready");
