@@ -35,14 +35,20 @@ const CUT_PRESETS: CutPreset[] = [
 const CUT_HOLD_MS = 1500;
 const MIN_TIME_BETWEEN_CUTS_MS = 6500;
 
+/* eslint-disable react-hooks/immutability --
+   This component drives the three.js camera imperatively inside useFrame
+   (camera.position and camera.lookAt mutated every frame) — the intended R3F
+   pattern. The React Compiler immutability rule doesn't model useFrame. */
 export function CameraRig() {
   const { camera } = useThree();
   const baseY = useRef(camera.position.y);
   const baseZ = useRef(camera.position.z);
   const lookTarget = useRef(new THREE.Vector3(0, 0, 0));
 
-  // Snap-cut state
-  const nextCutAt = useRef(performance.now() + 8000 + Math.random() * 6000);
+  // Snap-cut state. nextCutAt is scheduled on the first frame (see useFrame)
+  // rather than at render time, where performance.now()/Math.random() would be
+  // impure.
+  const nextCutAt = useRef(0);
   const cutEndsAt = useRef(0);
   const lastOnsetSeen = useRef(0);
   const cutPreset = useRef<CutPreset | null>(null);
@@ -50,6 +56,10 @@ export function CameraRig() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const now = performance.now();
+    // Schedule the first cut ~8-14s out, once, on the first frame.
+    if (nextCutAt.current === 0) {
+      nextCutAt.current = now + 8000 + Math.random() * 6000;
+    }
 
     // Trigger a cut: either scheduled or on a strong bass onset.
     const onsetCut =

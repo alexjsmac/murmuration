@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 export interface MotionSample {
   x: number;
@@ -22,13 +28,20 @@ interface UseAccelerometerReturn {
   requestPermission: () => Promise<boolean>;
 }
 
+const subscribeNoop = () => () => {};
+
 export function useAccelerometer(
   options: UseAccelerometerOptions,
 ): UseAccelerometerReturn {
   const { enabled, onSample, throttleMs = 60 } = options;
 
   const [hasPermission, setHasPermission] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  // Capability check is client-only; server snapshot is false.
+  const isSupported = useSyncExternalStore(
+    subscribeNoop,
+    () => "DeviceMotionEvent" in window,
+    () => false,
+  );
   const [error, setError] = useState<string | null>(null);
   const [lastSample, setLastSample] = useState<MotionSample | null>(null);
   const lastSampleRef = useRef<MotionSample | null>(null);
@@ -37,13 +50,6 @@ export function useAccelerometer(
   useEffect(() => {
     onSampleRef.current = onSample;
   }, [onSample]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ("DeviceMotionEvent" in window) {
-      setIsSupported(true);
-    }
-  }, []);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (typeof window === "undefined") {
@@ -56,11 +62,9 @@ export function useAccelerometer(
       };
     };
     if (!("DeviceMotionEvent" in win)) {
-      setIsSupported(false);
       setError("DeviceMotionEvent not supported");
       return false;
     }
-    setIsSupported(true);
     try {
       if (win.DeviceMotionEvent?.requestPermission) {
         const result = await win.DeviceMotionEvent.requestPermission();

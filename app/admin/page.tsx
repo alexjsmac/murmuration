@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useScene } from "@/hooks/useScene";
 import { useGlitchers } from "@/hooks/useGlitchers";
 import { useObjects } from "@/hooks/useObjects";
@@ -21,19 +21,28 @@ const ADMIN_KEY_PARAM = "key";
 const ADMIN_KEY_VALUE = process.env.NEXT_PUBLIC_ADMIN_KEY ?? "";
 const ADMIN_STORAGE = "murmuration-admin";
 
-export default function AdminPage() {
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
+const subscribeNoop = () => () => {};
 
+export default function AdminPage() {
+  // Authorization derives from the ?key= param or a prior localStorage grant,
+  // both client-only. useSyncExternalStore returns null on the server (the
+  // CHECKING state) and the resolved value on the client with no mismatch.
+  const authorized = useSyncExternalStore<boolean | null>(
+    subscribeNoop,
+    () => {
+      const key = new URL(window.location.href).searchParams.get(
+        ADMIN_KEY_PARAM,
+      );
+      if (ADMIN_KEY_VALUE && key === ADMIN_KEY_VALUE) return true;
+      return localStorage.getItem(ADMIN_STORAGE) === "1";
+    },
+    () => null,
+  );
+
+  // Persist a key-based grant so later visits without ?key= stay authorized.
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const key = url.searchParams.get(ADMIN_KEY_PARAM);
-    if (ADMIN_KEY_VALUE && key === ADMIN_KEY_VALUE) {
-      localStorage.setItem(ADMIN_STORAGE, "1");
-      setAuthorized(true);
-      return;
-    }
-    setAuthorized(localStorage.getItem(ADMIN_STORAGE) === "1");
-  }, []);
+    if (authorized) localStorage.setItem(ADMIN_STORAGE, "1");
+  }, [authorized]);
 
   if (authorized === null) {
     return <Status label="CHECKING" />;

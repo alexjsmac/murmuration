@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 
-export default function LandingPage() {
-  const [origin, setOrigin] = useState<string>("");
+const subscribeNoop = () => () => {};
 
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
+export default function LandingPage() {
+  // window.location is client-only. useSyncExternalStore renders "" on the
+  // server and the real origin on the client with no hydration mismatch.
+  const origin = useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.origin,
+    () => "",
+  );
 
   const playUrl = origin ? `${origin}/play/` : "";
 

@@ -12,6 +12,10 @@ import {
 } from "@/lib/line-color";
 import { makeFlashable } from "@/lib/flashable-material";
 
+/* eslint-disable react-hooks/immutability --
+   This component morphs the three.js geometry position buffer and mutates the
+   group transform every frame inside useFrame — the intended R3F pattern,
+   which the React Compiler immutability rule doesn't model. */
 export function HeroMesh({
   kind,
   color,

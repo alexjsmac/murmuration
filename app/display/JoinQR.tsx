@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
+
+const subscribeNoop = () => () => {};
 
 /**
  * Small "join" QR pinned to the bottom-right of /display. Encodes the
@@ -14,11 +16,12 @@ import { QRCodeSVG } from "qrcode.react";
  * cyberpunk UI vocabulary.
  */
 export function JoinQR() {
-  const [playUrl, setPlayUrl] = useState<string>("");
-
-  useEffect(() => {
-    setPlayUrl(`${window.location.origin}/play/`);
-  }, []);
+  // window.location is client-only; server snapshot is "" so SSR/CSR agree.
+  const playUrl = useSyncExternalStore(
+    subscribeNoop,
+    () => `${window.location.origin}/play/`,
+    () => "",
+  );
 
   if (!playUrl) return null;
 

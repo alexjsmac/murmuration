@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { ref, onValue } from "firebase/database";
 import { realtimeDb } from "@/lib/firebase-config";
 import { DEFAULT_SCENE_STATE } from "@/lib/types";
@@ -44,28 +50,29 @@ const audioGainRef = { current: DEFAULT_SCENE_STATE.audioGain };
 
 interface ArmState {
   isArmed: boolean;
-  isSupported: boolean;
   error: string | null;
 }
+
+const subscribeNoop = () => () => {};
 
 export function useAudioArm() {
   const [state, setState] = useState<ArmState>({
     isArmed: false,
-    isSupported: true,
     error: null,
   });
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia ||
-      typeof window === "undefined" ||
-      !("AudioContext" in window || "webkitAudioContext" in window)
-    ) {
-      setState((s) => ({ ...s, isSupported: false }));
-    }
-  }, []);
+  // Mic + AudioContext support is a client-only capability check. Server
+  // snapshot is `true` (optimistic, matching the prior default) so it doesn't
+  // bake an "unsupported" state into the prerendered HTML.
+  const isSupported = useSyncExternalStore(
+    subscribeNoop,
+    () =>
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      ("AudioContext" in window || "webkitAudioContext" in window),
+    () => true,
+  );
 
   // Subscribe to /scene/audioGain live so admin slider edits propagate
   // to the running tick without needing to re-arm the mic.
@@ -155,11 +162,11 @@ export function useAudioArm() {
         audioLevel.overall = 0;
       };
 
-      setState({ isArmed: true, isSupported: true, error: null });
+      setState({ isArmed: true, error: null });
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setState({ isArmed: false, isSupported: true, error: msg });
+      setState({ isArmed: false, error: msg });
       return false;
     }
   }, [state.isArmed]);
@@ -171,7 +178,7 @@ export function useAudioArm() {
     };
   }, []);
 
-  return { ...state, arm };
+  return { ...state, isSupported, arm };
 }
 
 function avg(data: Uint8Array, start: number, end: number): number {

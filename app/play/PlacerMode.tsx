@@ -55,16 +55,10 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     "none" | "processing" | "ready" | "noface" | "error"
   >("none");
 
-  // Stable per-session random rotation so each wireframe has a unique pose
-  // without re-randomizing on every render.
-  const rotationRef = useRef({
-    x: Math.random() * Math.PI * 2,
-    y: Math.random() * Math.PI * 2,
-    z: Math.random() * Math.PI * 2,
-  });
-
   // Create the wireframe immediately on entry with default values. The
-  // onDisconnect cleanup wiring lives inside upsertWireframe.
+  // onDisconnect cleanup wiring lives inside upsertWireframe. The stable
+  // per-session random pose is generated here (once, at mount) rather than
+  // during render so each wireframe gets a unique orientation.
   useEffect(() => {
     if (!sessionId) return;
     upsertWireframe(sessionId, {
@@ -72,7 +66,11 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
       color: DEFAULT_COLOR,
       effect: DEFAULT_EFFECT,
       position: padToScene(DEFAULT_PAD),
-      rotation: rotationRef.current,
+      rotation: {
+        x: Math.random() * Math.PI * 2,
+        y: Math.random() * Math.PI * 2,
+        z: Math.random() * Math.PI * 2,
+      },
     });
   }, [sessionId]);
 
@@ -84,12 +82,13 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
   }, [sessionId, shape, color, effect]);
 
   // Picking a non-selfie shape clears any previously-uploaded face mesh so
-  // the display falls back to the standard geometry.
+  // the display falls back to the standard geometry. The selfieState UI reset
+  // is co-located with the shape buttons (selectShape), not here, to keep this
+  // effect free of setState.
   useEffect(() => {
     if (!sessionId) return;
     if (shape !== "selfie") {
       updateWireframeFields(sessionId, { faceMesh: null });
-      setSelfieState("none");
     }
   }, [sessionId, shape]);
 
@@ -153,6 +152,13 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     }
   };
 
+  // Selecting a geometric shape resets the selfie UI state here (a direct
+  // event → setState) rather than in an effect reacting to `shape`.
+  const selectShape = (s: Shape) => {
+    setShape(s);
+    setSelfieState("none");
+  };
+
   const updatePositionFromEvent = (e: React.PointerEvent<HTMLDivElement>) => {
     const pad = padRef.current;
     if (!pad) return;
@@ -198,7 +204,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
             <button
               key={s}
               type="button"
-              onClick={() => setShape(s)}
+              onClick={() => selectShape(s)}
               className={`border p-2 flex flex-col items-center gap-1 transition-colors ${
                 shape === s
                   ? "border-magenta bg-magenta/15"

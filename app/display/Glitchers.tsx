@@ -3,19 +3,22 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { useGlitchers, type GlitcherEntry } from "@/hooks/useGlitchers";
+import { useNow } from "@/hooks/useNow";
 import { MAX_GLITCHERS_RENDERED } from "@/lib/presets";
 
 const STALE_MS = 3000;
 
 export function Glitchers() {
   const glitchers = useGlitchers();
+  // Ticking clock from state drives the staleness filter, so we don't read
+  // Date.now() during render; it also re-evaluates ~1x/s without new data.
+  const now = useNow(1000);
 
   const visible = useMemo(() => {
-    const now = Date.now();
     return glitchers
       .filter((g) => g.intensity > 0.05 && now - g.lastSeen < STALE_MS)
       .slice(0, MAX_GLITCHERS_RENDERED);
-  }, [glitchers]);
+  }, [glitchers, now]);
 
   return (
     <>
