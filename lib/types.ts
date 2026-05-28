@@ -89,11 +89,12 @@ export interface Wireframe {
   effect: Effect;
   dragging?: boolean;
   /**
-   * Flat array of [x,y,z,x,y,z,...] for shape="selfie" — client-side
-   * edge-extracted line segments from a user-uploaded photo. Each pair of
-   * triplets forms one LineSegments primitive on the wall.
+   * Flat array of [x,y,z,x,y,z,...] for shape="selfie" — 478 MediaPipe
+   * Face Landmarker points, normalized into scene space on the phone. The
+   * display builds an indexed LineSegments from the bundled face topology
+   * (lib/face-mesh-topology.ts), giving the wireframe real 3D depth.
    */
-  customLines?: number[];
+  faceMesh?: number[];
   joinedAt: number;
 }
 

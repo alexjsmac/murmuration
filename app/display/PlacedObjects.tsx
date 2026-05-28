@@ -13,6 +13,7 @@ import { useObjects, type WireframeEntry } from "@/hooks/useObjects";
 import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
+import { TESSELATION_INDEX, CONTOURS_INDEX } from "@/lib/face-mesh-topology";
 
 export function PlacedObjects() {
   const wireframes = useObjects();
@@ -70,27 +71,71 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
       groupRef.current.position.y += dy;
       groupRef.current.position.z += dz;
     }
+
+    // Faces add their own gentle yaw sway. Placed objects otherwise never
+    // rotate at runtime (effects touch only position/scale/color and the
+    // camera never orbits), so the 3D relief would only show from one frozen
+    // angle. This overrides the static JSX rotation each frame.
+    if (obj.faceMesh?.length) {
+      groupRef.current.rotation.set(
+        Math.sin(t * 0.5 + seed) * 0.08, // subtle pitch
+        Math.sin(t * 0.3 + seed) * 0.7, // yaw ±~40°
+        0, // stay upright
+      );
+    }
   });
 
-  // Selfie geometry — built on-demand from the user's uploaded edge data.
-  // Rebuilt whenever customLines changes. For non-selfie shapes this is
-  // unused.
-  const selfieGeometry = useMemo(() => {
-    if (obj.shape !== "selfie" || !obj.customLines?.length) return null;
-    const geom = new BufferGeometry();
-    geom.setAttribute(
-      "position",
-      new Float32BufferAttribute(obj.customLines, 3),
-    );
-    return geom;
-  }, [obj.shape, obj.customLines]);
+  // Face geometry — built on-demand from the user's uploaded MediaPipe
+  // landmarks. Two indexed line layers over the same 478 points: a dim full
+  // tessellation net and bright feature contours. A per-vertex grayscale
+  // depth attribute (nearer = brighter) gives the scan readable relief even
+  // before it sways. Only rebuilt when the points actually change — useObjects
+  // preserves the faceMesh array reference across position-only drag updates,
+  // so dragging a face never rebuilds its ~2,500 GPU edges.
+  const faceGeometry = useMemo(() => {
+    if (obj.shape !== "selfie" || !obj.faceMesh?.length) return null;
+    const positions = new Float32Array(obj.faceMesh);
+    const vcount = positions.length / 3;
 
-  // Dispose old selfie geometry on swap/unmount to avoid GPU buffer leak.
+    let zmin = Infinity;
+    let zmax = -Infinity;
+    for (let i = 0; i < vcount; i++) {
+      const z = positions[i * 3 + 2];
+      if (z < zmin) zmin = z;
+      if (z > zmax) zmax = z;
+    }
+    const span = zmax - zmin || 1;
+
+    // Grayscale (d,d,d) so final color = material.color (tint) × d. Keeping
+    // the tint out of the vertex color lets colorPulse's material.color
+    // modulation work without squaring the hue.
+    const colors = new Float32Array(vcount * 3);
+    for (let i = 0; i < vcount; i++) {
+      const tnorm = (positions[i * 3 + 2] - zmin) / span; // 0 = nearest
+      const d = 1.2 - 0.75 * tnorm; // nearer = brighter (1.2 .. 0.45)
+      colors[i * 3] = d;
+      colors[i * 3 + 1] = d;
+      colors[i * 3 + 2] = d;
+    }
+
+    const make = (index: number[]) => {
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(positions, 3));
+      g.setAttribute("color", new Float32BufferAttribute(colors, 3));
+      g.setIndex(index);
+      return g;
+    };
+
+    return { tess: make(TESSELATION_INDEX), contour: make(CONTOURS_INDEX) };
+  }, [obj.shape, obj.faceMesh]);
+
+  // Dispose both layers on swap/unmount to avoid GPU buffer leaks.
   useEffect(() => {
     return () => {
-      selfieGeometry?.dispose();
+      faceGeometry?.tess.dispose();
+      faceGeometry?.contour.dispose();
     };
-  }, [selfieGeometry]);
+  }, [faceGeometry]);
 
   if (obj.shape === "axisGizmo") {
     return (
@@ -108,17 +153,28 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
   if (obj.shape === "selfie") {
     // Awaiting upload: render nothing rather than fall through to a
     // missing-geometry crash.
-    if (!selfieGeometry) return null;
+    if (!faceGeometry) return null;
+    // Rotation is driven entirely by useFrame (yaw sway); start face-on
+    // rather than using the random per-session rotation.
     return (
       <group
         ref={groupRef}
         position={[obj.position.x, obj.position.y, obj.position.z]}
-        rotation={[obj.rotation.x, obj.rotation.y, obj.rotation.z]}
+        rotation={[0, 0, 0]}
       >
-        <lineSegments geometry={selfieGeometry}>
+        <lineSegments geometry={faceGeometry.tess}>
+          <lineBasicMaterial
+            color={obj.color}
+            vertexColors
+            transparent
+            opacity={0.28}
+          />
+        </lineSegments>
+        <lineSegments geometry={faceGeometry.contour}>
           <lineBasicMaterial
             ref={matRef}
             color={obj.color}
+            vertexColors
             transparent
             opacity={0.95}
           />

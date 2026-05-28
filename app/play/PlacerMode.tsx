@@ -18,9 +18,9 @@ import {
 } from "@/lib/types";
 import { GLITCHER_THROTTLE_MS, ROUND_DURATION_MS } from "@/lib/presets";
 
-// image-to-edges is only loaded on first selfie upload to keep the /play
-// initial JS payload smaller (it pulls in canvas/ImageData utilities that
-// aren't otherwise needed).
+// image-to-facemesh pulls in the MediaPipe wrapper; it's lazily imported on
+// first selfie upload so it lands in its own chunk, out of the /play initial
+// bundle. The wasm + model are fetched same-origin on first use.
 
 const DEFAULT_SHAPE: Shape = "ico";
 const DEFAULT_COLOR = PALETTE[0];
@@ -52,7 +52,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selfieState, setSelfieState] = useState<
-    "none" | "processing" | "ready" | "error"
+    "none" | "processing" | "ready" | "noface" | "error"
   >("none");
 
   // Stable per-session random rotation so each wireframe has a unique pose
@@ -83,12 +83,12 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     updateWireframeFields(sessionId, { shape, color, effect });
   }, [sessionId, shape, color, effect]);
 
-  // Picking a non-selfie shape clears any previously-uploaded customLines
-  // so the display falls back to the standard geometry.
+  // Picking a non-selfie shape clears any previously-uploaded face mesh so
+  // the display falls back to the standard geometry.
   useEffect(() => {
     if (!sessionId) return;
     if (shape !== "selfie") {
-      updateWireframeFields(sessionId, { customLines: null });
+      updateWireframeFields(sessionId, { faceMesh: null });
       setSelfieState("none");
     }
   }, [sessionId, shape]);
@@ -133,22 +133,22 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
     if (!sessionId) return;
     setSelfieState("processing");
     try {
-      // Lazy import — keeps Canvas/ImageData-using code out of the initial
-      // /play bundle so first-load on cellular is faster.
-      const { extractEdgeSegments } = await import("@/lib/image-to-edges");
-      const segments = await extractEdgeSegments(file);
-      if (segments.length === 0) {
-        setSelfieState("error");
+      // Lazy import — keeps the MediaPipe wrapper out of the /play initial
+      // bundle (its own chunk; wasm + model fetched same-origin on first use).
+      const { extractFaceMesh } = await import("@/lib/image-to-facemesh");
+      const pts = await extractFaceMesh(file); // null when no face is found
+      if (!pts) {
+        setSelfieState("noface");
         return;
       }
       await updateWireframeFields(sessionId, {
         shape: "selfie",
-        customLines: segments,
+        faceMesh: pts,
       });
       setShape("selfie");
       setSelfieState("ready");
     } catch (err) {
-      console.error("selfie extraction failed", err);
+      console.error("face mesh extraction failed", err);
       setSelfieState("error");
     }
   };
@@ -235,12 +235,14 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
           } disabled:opacity-50`}
         >
           {selfieState === "processing"
-            ? "[ Processing… ]"
-            : selfieState === "error"
-              ? "[ Try another photo ]"
-              : shape === "selfie"
-                ? "[ Selfie · Tap to change ]"
-                : "[ Upload Selfie ]"}
+            ? "[ Reading face… ]"
+            : selfieState === "noface"
+              ? "[ No face — try again ]"
+              : selfieState === "error"
+                ? "[ Try another photo ]"
+                : shape === "selfie"
+                  ? "[ Selfie · Tap to change ]"
+                  : "[ Upload Selfie ]"}
         </button>
       </section>
 
