@@ -54,6 +54,9 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
   const [selfieState, setSelfieState] = useState<
     "none" | "processing" | "ready" | "noface" | "error"
   >("none");
+  // Surfaced under the upload button when extraction throws, so phone-only
+  // failures (e.g. an undecodable photo) are diagnosable without a console.
+  const [selfieErrorMsg, setSelfieErrorMsg] = useState<string | null>(null);
 
   // Create the wireframe immediately on entry with default values. The
   // onDisconnect cleanup wiring lives inside upsertWireframe. The stable
@@ -131,6 +134,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
   const handleSelfieFile = async (file: File) => {
     if (!sessionId) return;
     setSelfieState("processing");
+    setSelfieErrorMsg(null);
     try {
       // Lazy import — keeps the MediaPipe wrapper out of the /play initial
       // bundle (its own chunk; wasm + model fetched same-origin on first use).
@@ -148,6 +152,7 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
       setSelfieState("ready");
     } catch (err) {
       console.error("face mesh extraction failed", err);
+      setSelfieErrorMsg(err instanceof Error ? err.message : String(err));
       setSelfieState("error");
     }
   };
@@ -250,6 +255,11 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
                   ? "[ Selfie · Tap to change ]"
                   : "[ Upload Selfie ]"}
         </button>
+        {selfieState === "error" && selfieErrorMsg ? (
+          <p className="mt-1 text-[9px] leading-tight text-magenta/70 break-words">
+            {selfieErrorMsg}
+          </p>
+        ) : null}
       </section>
 
       <section className="px-4 py-2">

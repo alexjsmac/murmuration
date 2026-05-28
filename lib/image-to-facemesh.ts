@@ -4,6 +4,10 @@ import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 const FACE_SCALE = 2.2;
 // Depth amplification so relief (nose/cheeks) reads through the bloom stack.
 const Z_GAIN = 1.6;
+// Phone photos are huge (often 12 MP) and frequently HEIC. We decode through an
+// <img> and downscale to this max dimension before inference — ample detail for
+// 478 landmarks, far lighter on phone memory than detecting on the full bitmap.
+const MAX_DETECT_DIM = 1280;
 
 // The MediaPipe runtime + model (~7 MB) is created once and reused across
 // re-uploads. wasm and model are self-hosted under public/mediapipe (copied
@@ -46,6 +50,37 @@ async function silencingTfliteInfo<T>(fn: () => T | Promise<T>): Promise<T> {
 }
 
 /**
+ * Decode an uploaded image into a downscaled canvas for inference. Decoding via
+ * an <img> element (rather than createImageBitmap) is the most compatible path
+ * on phones — notably iOS Safari, which can decode HEIC camera captures in an
+ * <img> but NOT via createImageBitmap. The browser applies EXIF orientation
+ * when rendering the <img>, so portrait selfies aren't detected sideways.
+ */
+async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(
+      1,
+      MAX_DETECT_DIM / Math.max(img.naturalWidth, img.naturalHeight),
+    );
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not get a 2D canvas context");
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
  * Run MediaPipe Face Landmarker on a captured selfie and return the 478
  * landmarks as a flat [x, y, z, ...] array in scene space, or null when no
  * face is detected. Only these abstract coordinates ever leave the phone —
@@ -53,20 +88,10 @@ async function silencingTfliteInfo<T>(fn: () => T | Promise<T>): Promise<T> {
  */
 export async function extractFaceMesh(file: File): Promise<number[] | null> {
   const landmarker = await silencingTfliteInfo(() => getLandmarker());
-  // "from-image" applies EXIF orientation so portrait phone photos aren't
-  // detected sideways.
-  const bitmap = await createImageBitmap(file, {
-    imageOrientation: "from-image",
-  });
-
-  let landmarks;
-  try {
-    landmarks = await silencingTfliteInfo(
-      () => landmarker.detect(bitmap).faceLandmarks?.[0],
-    );
-  } finally {
-    bitmap.close();
-  }
+  const canvas = await fileToCanvas(file);
+  const landmarks = await silencingTfliteInfo(
+    () => landmarker.detect(canvas).faceLandmarks?.[0],
+  );
   if (!landmarks || landmarks.length === 0) return null;
 
   // Recenter on the face centroid so it sits at the object's local origin.
