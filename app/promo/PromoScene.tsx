@@ -62,6 +62,7 @@ export function PromoScene() {
           color={preset.heroColor}
           morphAmp={preset.morphAmp}
           spinSpeed={preset.heroSpinSpeed}
+          resetAt={0}
         />
         <AxisGizmoProp />
         <PromoDecor />

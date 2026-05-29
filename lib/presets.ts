@@ -155,7 +155,14 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-export const ROUND_DURATION_MS = 4 * 60 * 1000;
+export const ROUND_DURATION_MS = 5 * 60 * 1000;
+
+/**
+ * Final stretch of each round during which the hero "deconstructs" — its
+ * wireframe pieces burst outward and fade to nothing by the round's end, just
+ * before the preset rotates to a fresh hero. Consumed by HeroMesh.
+ */
+export const DECONSTRUCT_MS = 60 * 1000;
 
 export const PLACE_THROTTLE_MS = 2000;
 export const GLITCHER_THROTTLE_MS = 60;

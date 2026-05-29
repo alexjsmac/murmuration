@@ -79,6 +79,7 @@ export function Scene() {
           color={preset.heroColor}
           morphAmp={preset.morphAmp}
           spinSpeed={preset.heroSpinSpeed}
+          resetAt={scene.resetAt}
         />
         {preset.showAxisGizmo && <AxisGizmoProp />}
         <PlacedObjects />
