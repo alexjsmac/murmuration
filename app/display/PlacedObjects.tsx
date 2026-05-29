@@ -10,6 +10,7 @@ import {
   SphereGeometry,
   type Group,
   type LineBasicMaterial,
+  type Mesh,
 } from "three";
 import { useObjects, type WireframeEntry } from "@/hooks/useObjects";
 import { audioLevel } from "@/hooks/useAudioLevel";
@@ -27,11 +28,15 @@ const EYE_R = 1.0;
 // chromatic-aberration pass, so keep those channels at zero.
 const EYE_G = 0.0;
 const EYE_B = 0.0;
-const EYE_BASE = 1.7; // a touch brighter to offset pure red's lower luminance
-const EYE_PULSE = 0.6;
-const EYE_BASS = 1.8;
+// Brightness (HDR, >1): higher = more bloom glow. base + gentle pulse + bass.
+const EYE_BASE = 2.4;
+const EYE_PULSE = 1.2;
+const EYE_BASS = 2.6;
 const EYE_PULSE_RATE = 1.6; // rad/s — slow & gentle
-const EYE_GEOMETRY = new SphereGeometry(0.06, 12, 12); // shared by all eyes
+// The orbs also throb in size with the same pulse + bass for a stronger pulse.
+const EYE_SCALE_PULSE = 0.25;
+const EYE_SCALE_BASS = 0.6;
+const EYE_GEOMETRY = new SphereGeometry(0.075, 16, 16); // shared by all eyes
 
 export function PlacedObjects() {
   const wireframes = useObjects();
@@ -54,6 +59,8 @@ export function PlacedObjects() {
 function PlacedMesh({ obj }: { obj: WireframeEntry }) {
   const groupRef = useRef<Group>(null);
   const matRef = useRef<LineBasicMaterial>(null);
+  const leftEyeRef = useRef<Mesh>(null);
+  const rightEyeRef = useRef<Mesh>(null);
   const baseColor = useMemo(() => new ThreeColor(obj.color), [obj.color]);
   const seed = useMemo(
     () => hashStringToFloat(obj.sessionId),
@@ -115,13 +122,16 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
       );
 
       // Glowing eyes: steady base + gentle sine pulse + bass flare, kept HDR
-      // (>1) so the bloom turns them into a red glow. Per-seed phase so faces
-      // don't pulse in unison.
-      const bright =
-        EYE_BASE +
-        EYE_PULSE * (0.5 + 0.5 * Math.sin(t * EYE_PULSE_RATE + seed)) +
-        EYE_BASS * audioLevel.bass;
+      // (>1) so the bloom turns them into a red glow; the orbs also throb in
+      // size with the same pulse + bass. Per-seed phase so faces don't pulse
+      // in unison.
+      const pulse01 = 0.5 + 0.5 * Math.sin(t * EYE_PULSE_RATE + seed);
+      const bright = EYE_BASE + EYE_PULSE * pulse01 + EYE_BASS * audioLevel.bass;
       eyeMat.color.setRGB(EYE_R * bright, EYE_G * bright, EYE_B * bright);
+      const eyeScale =
+        1 + EYE_SCALE_PULSE * pulse01 + EYE_SCALE_BASS * audioLevel.bass;
+      leftEyeRef.current?.scale.setScalar(eyeScale);
+      rightEyeRef.current?.scale.setScalar(eyeScale);
     }
   });
 
@@ -261,11 +271,13 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
         {eyePositions && (
           <>
             <mesh
+              ref={leftEyeRef}
               geometry={EYE_GEOMETRY}
               material={eyeMat}
               position={eyePositions.left}
             />
             <mesh
+              ref={rightEyeRef}
               geometry={EYE_GEOMETRY}
               material={eyeMat}
               position={eyePositions.right}
