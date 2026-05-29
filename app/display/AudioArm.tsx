@@ -48,13 +48,26 @@ export function AudioArm() {
 }
 
 function ArmedIndicator() {
-  // Tiny live readout in the corner. Updates via requestAnimationFrame
-  // outside React state to avoid scene re-renders.
+  // Tiny live readout in the corner: audio bass level + FPS. The meters update
+  // via requestAnimationFrame (not React state) to avoid scene re-renders.
+  // Clicking the pink dot toggles the values; the dot stays as the affordance.
+  const [showValues, setShowValues] = useState(true);
   return (
     <div className="fixed bottom-3 left-3 z-50 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-foreground/40">
-      <span className="w-1.5 h-1.5 rounded-full bg-magenta animate-pulse" />
-      Audio
-      <LiveMeter />
+      <button
+        type="button"
+        onClick={() => setShowValues((v) => !v)}
+        aria-label={showValues ? "Hide readout" : "Show readout"}
+        title="Toggle readout"
+        className="p-1 -m-1 leading-none cursor-pointer"
+      >
+        <span className="block w-1.5 h-1.5 rounded-full bg-magenta animate-pulse" />
+      </button>
+      <span className={showValues ? "flex items-center gap-2" : "hidden"}>
+        Audio <LiveMeter />
+        <span className="text-foreground/20">·</span>
+        FPS <FpsMeter />
+      </span>
     </div>
   );
 }
@@ -73,4 +86,30 @@ function LiveMeter() {
     el.dataset.raf = String(raf);
   };
   return <span ref={setRef} className="font-mono">00</span>;
+}
+
+function FpsMeter() {
+  // FPS from the browser's rAF cadence (which the R3F render loop drives),
+  // averaged over ~0.5s. Pure DOM updates via raf — no React state.
+  const setRef = (el: HTMLSpanElement | null) => {
+    if (!el) return;
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const tick = () => {
+      frames++;
+      const now = performance.now();
+      const dt = now - last;
+      if (dt >= 500) {
+        const fps = Math.round((frames * 1000) / dt);
+        el.textContent = fps.toString().padStart(2, "0");
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    el.dataset.raf = String(raf);
+  };
+  return <span ref={setRef} className="font-mono">--</span>;
 }
