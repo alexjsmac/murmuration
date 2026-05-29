@@ -43,7 +43,9 @@ function Beam({ g, dim }: { g: GlitcherEntry; dim: number }) {
   // All beams anchored at scene origin. Phone pad x/y becomes yaw/pitch
   // (the user "aims" outward from center). Hold strength → length + thickness.
   const yaw = g.position.x * (Math.PI / 3); // ~±60° horizontal sweep
-  const pitch = g.position.y * (Math.PI / 4); // ~±45° vertical sweep
+  // Negated: rotating the +z beam about X by +θ tilts it toward −y (down), so
+  // aim-up (position.y > 0) needs a negative pitch to tilt the beam up.
+  const pitch = -g.position.y * (Math.PI / 4); // ~±45° vertical sweep
   const length = 1.5 + g.intensity * 11;
   const radius = 0.15 + g.intensity * 0.6;
 
