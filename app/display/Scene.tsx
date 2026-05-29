@@ -2,7 +2,8 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Grid, Sparkles } from "@react-three/drei";
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
+import type { Points, ShaderMaterial } from "three";
 import { CameraRig } from "./CameraRig";
 import { CloudBackdrop } from "./CloudBackdrop";
 import { HeroMesh } from "./HeroMesh";
@@ -17,6 +18,22 @@ import { presetById } from "@/lib/presets";
 export function Scene() {
   const scene = useScene();
   const preset = presetById(scene.preset);
+
+  // drei's Sparkles draws each spark as a square sprite whose alpha goes
+  // slightly NEGATIVE at the quad corners (strength = 0.05/dist - 0.1). With
+  // normal blending a negative alpha subtracts the spark colour from whatever
+  // is behind it, so over the (lit) cloud backdrop the corners render as dark
+  // squares. Patch the material to discard those corner fragments so only the
+  // soft circle draws. Runs per preset (Sparkles remounts on key change).
+  const fixSparkleCorners = useCallback((points: Points | null) => {
+    const mat = points?.material as ShaderMaterial | undefined;
+    if (!mat || mat.fragmentShader.includes("discard")) return;
+    mat.fragmentShader = mat.fragmentShader.replace(
+      "gl_FragColor = vec4(vColor, strength * vOpacity);",
+      "if (strength <= 0.0) discard;\n          gl_FragColor = vec4(vColor, strength * vOpacity);",
+    );
+    mat.needsUpdate = true;
+  }, []);
 
   return (
     <Canvas
@@ -73,6 +90,7 @@ export function Scene() {
             projector scale through bloom + chromatic aberration; otherwise
             the dots disappear into the post-process haze on dense presets. */}
         <Sparkles
+          ref={fixSparkleCorners}
           key={preset.id}
           count={preset.sparklesCount}
           scale={[24, 8, 24]}
