@@ -6,14 +6,30 @@ import {
   BufferGeometry,
   Color as ThreeColor,
   Float32BufferAttribute,
+  MeshBasicMaterial,
+  SphereGeometry,
   type Group,
   type LineBasicMaterial,
 } from "three";
 import { useObjects, type WireframeEntry } from "@/hooks/useObjects";
+import { audioLevel } from "@/hooks/useAudioLevel";
 import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { TESSELATION_INDEX, CONTOURS_INDEX } from "@/lib/face-mesh-topology";
+
+// Glowing red eyes for selfie faces — a hue unused elsewhere in the palette.
+// Rendered HDR (channels exceed 1) with toneMapped:false so the scene bloom
+// turns them into a glow; pure red's luminance otherwise sits under the bloom
+// threshold. Brightness = steady base + gentle sine pulse + bass flare.
+const EYE_R = 1.0;
+const EYE_G = 0.09;
+const EYE_B = 0.06;
+const EYE_BASE = 1.3;
+const EYE_PULSE = 0.6;
+const EYE_BASS = 1.8;
+const EYE_PULSE_RATE = 1.6; // rad/s — slow & gentle
+const EYE_GEOMETRY = new SphereGeometry(0.06, 12, 12); // shared by all eyes
 
 export function PlacedObjects() {
   const wireframes = useObjects();
@@ -40,6 +56,19 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
   const seed = useMemo(
     () => hashStringToFloat(obj.sessionId),
     [obj.sessionId],
+  );
+
+  // Per-face eye material (own instance so each face pulses on its own phase).
+  // Declared before useFrame, which mutates its colour each frame.
+  const eyeMat = useMemo(
+    () =>
+      new MeshBasicMaterial({
+        color: new ThreeColor(EYE_R, EYE_G, EYE_B),
+        toneMapped: false,
+        transparent: true,
+        depthWrite: false,
+      }),
+    [],
   );
 
   useFrame(({ clock }) => {
@@ -82,6 +111,15 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
         Math.sin(t * 0.3 + seed) * 0.7, // yaw ±~40°
         0, // stay upright
       );
+
+      // Glowing eyes: steady base + gentle sine pulse + bass flare, kept HDR
+      // (>1) so the bloom turns them into a red glow. Per-seed phase so faces
+      // don't pulse in unison.
+      const bright =
+        EYE_BASE +
+        EYE_PULSE * (0.5 + 0.5 * Math.sin(t * EYE_PULSE_RATE + seed)) +
+        EYE_BASS * audioLevel.bass;
+      eyeMat.color.setRGB(EYE_R * bright, EYE_G * bright, EYE_B * bright);
     }
   });
 
@@ -152,13 +190,29 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
     return { tess: make(TESSELATION_INDEX), contour: make(CONTOURS_INDEX) };
   }, [obj.shape, obj.faceMesh, obj.faceShade]);
 
-  // Dispose both layers on swap/unmount to avoid GPU buffer leaks.
+  // Iris-center landmarks (MediaPipe 468 / 473 = the pupils) for the glowing
+  // eyes — only when this is a selfie carrying the full 478-point mesh.
+  const eyePositions = useMemo(() => {
+    const fm = obj.faceMesh;
+    if (obj.shape !== "selfie" || !fm || fm.length < 478 * 3) return null;
+    const at = (i: number): [number, number, number] => [
+      fm[i * 3],
+      fm[i * 3 + 1],
+      fm[i * 3 + 2],
+    ];
+    return { left: at(468), right: at(473) };
+  }, [obj.shape, obj.faceMesh]);
+
+  // Dispose both face layers on swap/unmount to avoid GPU buffer leaks.
   useEffect(() => {
     return () => {
       faceGeometry?.tess.dispose();
       faceGeometry?.contour.dispose();
     };
   }, [faceGeometry]);
+
+  // Dispose the eye material on unmount (geometry is shared/module-level).
+  useEffect(() => () => eyeMat.dispose(), [eyeMat]);
 
   if (obj.shape === "axisGizmo") {
     return (
@@ -202,6 +256,20 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
             opacity={0.95}
           />
         </lineSegments>
+        {eyePositions && (
+          <>
+            <mesh
+              geometry={EYE_GEOMETRY}
+              material={eyeMat}
+              position={eyePositions.left}
+            />
+            <mesh
+              geometry={EYE_GEOMETRY}
+              material={eyeMat}
+              position={eyePositions.right}
+            />
+          </>
+        )}
       </group>
     );
   }
