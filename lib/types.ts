@@ -123,6 +123,13 @@ export interface SceneState {
   presetSwitchAt: number;
   globalIntensity: number;
   audioGain: number;
+  /**
+   * Max laser beams rendered on the wall at once (admin-tunable). Beams use
+   * additive blending, so many overlapping ones blow out through the bloom;
+   * this taming cap shows only the most-intense N. NOT a participation limit —
+   * anyone can still pick Glitcher and fire.
+   */
+  maxGlitchers: number;
   pause: boolean;
 }
 
@@ -132,5 +139,6 @@ export const DEFAULT_SCENE_STATE: SceneState = {
   presetSwitchAt: 0,
   globalIntensity: 0.4,
   audioGain: 1.0,
+  maxGlitchers: 6,
   pause: false,
 };

@@ -145,7 +145,7 @@ export const ROUND_DURATION_MS = 4 * 60 * 1000;
 export const PLACE_THROTTLE_MS = 2000;
 export const GLITCHER_THROTTLE_MS = 60;
 export const MAX_OBJECTS_RENDERED = 200;
-export const MAX_GLITCHERS_RENDERED = 50;
+// (Glitcher beam count is now the admin-tunable SceneState.maxGlitchers.)
 
 export function presetById(id: string): Preset {
   return PRESETS.find((p) => p.id === id) ?? PRESETS[0];

@@ -4,32 +4,42 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { useGlitchers, type GlitcherEntry } from "@/hooks/useGlitchers";
 import { useNow } from "@/hooks/useNow";
-import { MAX_GLITCHERS_RENDERED } from "@/lib/presets";
+import { useScene } from "@/hooks/useScene";
 
 const STALE_MS = 3000;
 
 export function Glitchers() {
   const glitchers = useGlitchers();
+  const scene = useScene();
   // Ticking clock from state drives the staleness filter, so we don't read
   // Date.now() during render; it also re-evaluates ~1x/s without new data.
   const now = useNow(1000);
 
+  // Beams use additive blending, so many overlapping ones sum to a white blob
+  // through the bloom. Show only the most-intense `maxGlitchers` (admin-tunable)
+  // — everyone can still fire, capped-out beams just aren't drawn this instant.
+  const cap = scene.maxGlitchers;
   const visible = useMemo(() => {
     return glitchers
       .filter((g) => g.intensity > 0.05 && now - g.lastSeen < STALE_MS)
-      .slice(0, MAX_GLITCHERS_RENDERED);
-  }, [glitchers, now]);
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, cap);
+  }, [glitchers, now, cap]);
+
+  // Dim the group by 1/sqrt(count) so the additive total stays bounded as
+  // beams stack (1 → unchanged, 4 → 0.5, 9 → 0.33).
+  const dim = 1 / Math.sqrt(visible.length || 1);
 
   return (
     <>
       {visible.map((g) => (
-        <Beam key={g.sessionId} g={g} />
+        <Beam key={g.sessionId} g={g} dim={dim} />
       ))}
     </>
   );
 }
 
-function Beam({ g }: { g: GlitcherEntry }) {
+function Beam({ g, dim }: { g: GlitcherEntry; dim: number }) {
   // All beams anchored at scene origin. Phone pad x/y becomes yaw/pitch
   // (the user "aims" outward from center). Hold strength → length + thickness.
   const yaw = g.position.x * (Math.PI / 3); // ~±60° horizontal sweep
@@ -47,7 +57,7 @@ function Beam({ g }: { g: GlitcherEntry }) {
         <meshBasicMaterial
           color={g.hue}
           transparent
-          opacity={0.18 + g.intensity * 0.45}
+          opacity={(0.18 + g.intensity * 0.45) * dim}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
           side={THREE.DoubleSide}

@@ -8,6 +8,7 @@ import { useNow } from "@/hooks/useNow";
 import {
   setAudioGain,
   setGlobalIntensity,
+  setMaxGlitchers,
   setPause,
   setPreset,
   triggerReset,
@@ -207,6 +208,27 @@ function Dashboard() {
         />
         <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40 mt-1">
           1.00&times; = raw mic. Crank up if mic is quiet or the room is dead.
+        </p>
+      </section>
+
+      <section className="mb-6">
+        <div className="flex justify-between items-baseline mb-1">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+            Max Lasers
+          </p>
+          <p className="text-xs font-mono">{scene.maxGlitchers}</p>
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={12}
+          step={1}
+          value={scene.maxGlitchers}
+          onChange={(e) => setMaxGlitchers(parseInt(e.target.value, 10))}
+          className="w-full accent-magenta"
+        />
+        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40 mt-1">
+          Most intense beams shown at once. Lower if the wall blows out.
         </p>
       </section>
 

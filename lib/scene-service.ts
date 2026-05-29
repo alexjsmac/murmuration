@@ -19,6 +19,7 @@ export async function ensureSceneInitialized(): Promise<void> {
       presetSwitchAt: serverTimestamp(),
       globalIntensity: DEFAULT_SCENE_STATE.globalIntensity,
       audioGain: DEFAULT_SCENE_STATE.audioGain,
+      maxGlitchers: DEFAULT_SCENE_STATE.maxGlitchers,
       pause: false,
     });
   }
@@ -53,6 +54,12 @@ export async function setAudioGain(value: number): Promise<void> {
   if (!realtimeDb) return;
   const clamped = Math.max(0, Math.min(5, value));
   await update(ref(realtimeDb, "scene"), { audioGain: clamped });
+}
+
+export async function setMaxGlitchers(value: number): Promise<void> {
+  if (!realtimeDb) return;
+  const clamped = Math.max(1, Math.min(12, Math.round(value)));
+  await update(ref(realtimeDb, "scene"), { maxGlitchers: clamped });
 }
 
 export async function setPause(pause: boolean): Promise<void> {

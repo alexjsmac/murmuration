@@ -27,6 +27,10 @@ export function useScene(): SceneState {
           typeof v.audioGain === "number"
             ? v.audioGain
             : DEFAULT_SCENE_STATE.audioGain,
+        maxGlitchers:
+          typeof v.maxGlitchers === "number"
+            ? v.maxGlitchers
+            : DEFAULT_SCENE_STATE.maxGlitchers,
         pause: !!v.pause,
       });
     });
