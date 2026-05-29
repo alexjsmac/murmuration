@@ -24,6 +24,9 @@ export interface Preset {
   gridAccent: string;
   sparklesColor: string;
   sparklesCount: number;
+  /** Background "electric cloud" gradient — two scheme-paired hues. */
+  bgColorA: string;
+  bgColorB: string;
   /** Tighter [near,far] = more enclosed/atmospheric. Default [10,30]. */
   fogNear: number;
   fogFar: number;
@@ -47,6 +50,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#ff3df0",
     sparklesColor: "#ff3df0",
     sparklesCount: 140,
+    bgColorA: "#ff007a",
+    bgColorB: "#6a00d8",
     fogNear: 10,
     fogFar: 30,
     morphAmp: 0.13,
@@ -64,6 +69,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#aaffff",
     sparklesColor: "#00f0ff",
     sparklesCount: 100,
+    bgColorA: "#00f0ff",
+    bgColorB: "#0048ff",
     fogNear: 8,
     fogFar: 26,
     morphAmp: 0.18,
@@ -81,6 +88,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#ff007a",
     sparklesColor: "#f5ff00",
     sparklesCount: 160,
+    bgColorA: "#ff3df0",
+    bgColorB: "#b800ff",
     fogNear: 10,
     fogFar: 28,
     morphAmp: 0.08,
@@ -98,6 +107,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#f5ff00",
     sparklesColor: "#aaff00",
     sparklesCount: 90,
+    bgColorA: "#aaff00",
+    bgColorB: "#00a850",
     fogNear: 6,
     fogFar: 18,
     morphAmp: 0.16,
@@ -115,6 +126,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#aaffff",
     sparklesColor: "#ffffff",
     sparklesCount: 130,
+    bgColorA: "#ff007a",
+    bgColorB: "#00f0ff",
     fogNear: 10,
     fogFar: 30,
     morphAmp: 0.06,
@@ -132,6 +145,8 @@ export const PRESETS: Preset[] = [
     gridAccent: "#ffffff",
     sparklesColor: "#ffffff",
     sparklesCount: 60,
+    bgColorA: "#4a64b4",
+    bgColorB: "#0a0e1c",
     fogNear: 12,
     fogFar: 35,
     morphAmp: 0.08,

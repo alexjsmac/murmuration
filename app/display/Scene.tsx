@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, Sparkles } from "@react-three/drei";
 import { Suspense } from "react";
 import { CameraRig } from "./CameraRig";
+import { CloudBackdrop } from "./CloudBackdrop";
 import { HeroMesh } from "./HeroMesh";
 import { AxisGizmoProp } from "./AxisGizmoProp";
 import { PlacedObjects } from "./PlacedObjects";
@@ -35,6 +36,8 @@ export function Scene() {
       <directionalLight position={[5, 8, 5]} intensity={0.4} />
 
       <CameraRig />
+
+      <CloudBackdrop colorA={preset.bgColorA} colorB={preset.bgColorB} />
 
       {preset.gridColor && (
         <Grid
