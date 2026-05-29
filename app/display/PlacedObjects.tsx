@@ -23,9 +23,11 @@ import { TESSELATION_INDEX, CONTOURS_INDEX } from "@/lib/face-mesh-topology";
 // turns them into a glow; pure red's luminance otherwise sits under the bloom
 // threshold. Brightness = steady base + gentle sine pulse + bass flare.
 const EYE_R = 1.0;
-const EYE_G = 0.09;
-const EYE_B = 0.06;
-const EYE_BASE = 1.3;
+// Pure red — any green/blue gets split into separate ghost orbs by the scene's
+// chromatic-aberration pass, so keep those channels at zero.
+const EYE_G = 0.0;
+const EYE_B = 0.0;
+const EYE_BASE = 1.7; // a touch brighter to offset pure red's lower luminance
 const EYE_PULSE = 0.6;
 const EYE_BASS = 1.8;
 const EYE_PULSE_RATE = 1.6; // rad/s — slow & gentle
