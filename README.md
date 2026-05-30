@@ -11,7 +11,7 @@ A co-created live visual installation. Built in real time by the audience, anyon
   - **Placer** — drop wireframe shapes (cube, ico, head, cone, axes gizmo) with a color and effect (still / pulse / color-pulse / drift / glitch-jitter) into the scene. Includes a live 3D preview of your selection.
   - **Glitcher** — tap-and-drag a touch pad to aim a beam of glitch-light through the projection. Power ramps up while held, decays on release.
 - **`/display`** — The wall-projected Three.js scene. Magenta perspective grid, wireframe hero mesh (head / ico / torus / abstract), chromatic-aberration + scanline + sporadic-glitch post-process. Auto-resets every ~4 minutes; hero preset rotates on each reset.
-- **`/admin?key=...`** — Operator dashboard. Force reset, switch preset, modulate global glitch intensity, pause, kick a session. The required key value is set via `NEXT_PUBLIC_ADMIN_KEY` in `.env.local`.
+- **`/admin`** — Operator dashboard. Force reset, switch preset, modulate global glitch intensity, pause, kick a session, view/reset the participant count. Password-gated via a login form; the password is set with `NEXT_PUBLIC_ADMIN_PASSWORD` (falls back to `NEXT_PUBLIC_ADMIN_KEY`) in `.env.local`. Note: `NEXT_PUBLIC_*` values are baked into the client bundle at build time, so this is a convenience gate, not real security.
 - **`/promo`** — Square 1:1 promo render with the title overlaid in flyer typography. Useful for grabbing fresh promo images at any scene state.
 
 Realtime sync runs through Firebase Realtime Database — single global "scene" room, no per-user isolation. The display side owns the reset timer and writes the canonical scene state; phones and admin both subscribe and contribute.

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useScene } from "@/hooks/useScene";
 import { useGlitchers } from "@/hooks/useGlitchers";
 import { useObjects } from "@/hooks/useObjects";
@@ -20,43 +26,91 @@ import { ref, onValue, remove } from "firebase/database";
 import { realtimeDb } from "@/lib/firebase-config";
 import type { Connection, Mode } from "@/lib/types";
 
-const ADMIN_KEY_PARAM = "key";
-const ADMIN_KEY_VALUE = process.env.NEXT_PUBLIC_ADMIN_KEY ?? "";
+// Admin password from NEXT_PUBLIC_ADMIN_PASSWORD (falls back to the legacy
+// NEXT_PUBLIC_ADMIN_KEY so existing setups keep working). NOTE: NEXT_PUBLIC_*
+// values are inlined into the client bundle at build time, so this gate keeps
+// casual users out but is NOT real security — don't reuse a sensitive password.
+const ADMIN_PASSWORD =
+  process.env.NEXT_PUBLIC_ADMIN_PASSWORD ??
+  process.env.NEXT_PUBLIC_ADMIN_KEY ??
+  "";
 const ADMIN_STORAGE = "murmuration-admin";
 
 const subscribeNoop = () => () => {};
 
 export default function AdminPage() {
-  // Authorization derives from the ?key= param or a prior localStorage grant,
-  // both client-only. useSyncExternalStore returns null on the server (the
-  // CHECKING state) and the resolved value on the client with no mismatch.
-  const authorized = useSyncExternalStore<boolean | null>(
+  // Persisted grant (localStorage) read SSR-safely: null on the server
+  // (CHECKING), boolean on the client. A correct password flips loggedIn for
+  // this session and persists the grant for later visits.
+  const persisted = useSyncExternalStore<boolean | null>(
     subscribeNoop,
-    () => {
-      const key = new URL(window.location.href).searchParams.get(
-        ADMIN_KEY_PARAM,
-      );
-      if (ADMIN_KEY_VALUE && key === ADMIN_KEY_VALUE) return true;
-      return localStorage.getItem(ADMIN_STORAGE) === "1";
-    },
+    () => localStorage.getItem(ADMIN_STORAGE) === "1",
     () => null,
   );
-
-  // Persist a key-based grant so later visits without ?key= stay authorized.
-  useEffect(() => {
-    if (authorized) localStorage.setItem(ADMIN_STORAGE, "1");
-  }, [authorized]);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const authorized = persisted === null ? null : persisted || loggedIn;
 
   if (authorized === null) {
     return <Status label="CHECKING" />;
   }
   if (!authorized) {
-    return <Status label="LOCKED" />;
+    return <LoginForm onSuccess={() => setLoggedIn(true)} />;
   }
   if (!realtimeDb) {
     return <Status label="OFFLINE" sub="Firebase env not configured." />;
   }
   return <Dashboard />;
+}
+
+function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
+      localStorage.setItem(ADMIN_STORAGE, "1");
+      onSuccess();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <main className="flex-1 flex flex-col items-center justify-center p-8 gap-5">
+      <p className="text-magenta text-xs uppercase tracking-[0.4em]">
+        Admin · Locked
+      </p>
+      <form
+        onSubmit={submit}
+        className="flex flex-col items-center gap-3 w-full max-w-xs"
+      >
+        <input
+          type="password"
+          autoFocus
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError(false);
+          }}
+          placeholder="Password"
+          aria-label="Admin password"
+          className="w-full bg-transparent border border-foreground/30 focus:border-magenta px-3 py-3 text-center text-sm tracking-[0.3em] outline-none"
+        />
+        <button
+          type="submit"
+          className="w-full border border-magenta bg-magenta/10 hover:bg-magenta/25 px-4 py-3 uppercase tracking-[0.3em] text-xs text-magenta"
+        >
+          [ Unlock ]
+        </button>
+        {error && (
+          <p className="text-[10px] uppercase tracking-[0.3em] text-magenta/80">
+            Incorrect password
+          </p>
+        )}
+      </form>
+    </main>
+  );
 }
 
 function Dashboard() {
@@ -98,13 +152,25 @@ function Dashboard() {
 
   return (
     <main className="flex-1 p-6 max-w-3xl mx-auto w-full">
-      <header className="mb-6 flex items-baseline justify-between">
+      <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight">
           <span className="bg-yellow text-black px-2 py-0.5">ADMIN</span>
         </h1>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-          [ {scene.pause ? "PAUSED" : "LIVE"} ]
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+            [ {scene.pause ? "PAUSED" : "LIVE"} ]
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem(ADMIN_STORAGE);
+              window.location.reload();
+            }}
+            className="text-[10px] uppercase tracking-[0.3em] text-foreground/40 hover:text-magenta border border-foreground/20 hover:border-magenta/50 px-2 py-1"
+          >
+            Lock
+          </button>
+        </div>
       </header>
 
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
