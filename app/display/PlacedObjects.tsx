@@ -8,6 +8,7 @@ import {
   Float32BufferAttribute,
   MeshBasicMaterial,
   SphereGeometry,
+  Vector3,
   type Group,
   type LineBasicMaterial,
   type Mesh,
@@ -18,6 +19,7 @@ import { MAX_OBJECTS_RENDERED } from "@/lib/presets";
 import { edgesByShape } from "@/lib/object-geometries";
 import { applyEffect } from "@/lib/effect-runtime";
 import { TESSELATION_INDEX, CONTOURS_INDEX } from "@/lib/face-mesh-topology";
+import { Connections, type ConnRegistry } from "./Connections";
 
 // Glowing red eyes for selfie faces — a hue unused elsewhere in the palette.
 // Rendered HDR (channels exceed 1) with toneMapped:false so the scene bloom
@@ -47,16 +49,27 @@ export function PlacedObjects() {
     [wireframes],
   );
 
+  // Shared registry of live positions/colours, written each frame by every
+  // PlacedMesh and read by <Connections> to draw the proximity strands.
+  const registry = useMemo<ConnRegistry>(() => new Map(), []);
+
   return (
     <>
       {visible.map((w) => (
-        <PlacedMesh key={w.sessionId} obj={w} />
+        <PlacedMesh key={w.sessionId} obj={w} registry={registry} />
       ))}
+      <Connections registry={registry} />
     </>
   );
 }
 
-function PlacedMesh({ obj }: { obj: WireframeEntry }) {
+function PlacedMesh({
+  obj,
+  registry,
+}: {
+  obj: WireframeEntry;
+  registry: ConnRegistry;
+}) {
   const groupRef = useRef<Group>(null);
   const matRef = useRef<LineBasicMaterial>(null);
   const leftEyeRef = useRef<Mesh>(null);
@@ -133,7 +146,24 @@ function PlacedMesh({ obj }: { obj: WireframeEntry }) {
       leftEyeRef.current?.scale.setScalar(eyeScale);
       rightEyeRef.current?.scale.setScalar(eyeScale);
     }
+
+    // Publish the live world position + colour for the Connections strands.
+    let entry = registry.get(obj.sessionId);
+    if (!entry) {
+      entry = { pos: new Vector3(), color: baseColor };
+      registry.set(obj.sessionId, entry);
+    }
+    entry.color = baseColor;
+    entry.pos.copy(groupRef.current.position);
   });
+
+  // Drop this object from the connection registry when it leaves.
+  useEffect(
+    () => () => {
+      registry.delete(obj.sessionId);
+    },
+    [registry, obj.sessionId],
+  );
 
   // Face geometry — built on-demand from the user's uploaded MediaPipe
   // landmarks. Two indexed line layers over the same 478 points: a dim full
