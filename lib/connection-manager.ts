@@ -6,6 +6,7 @@ import {
   serverTimestamp,
 } from "firebase/database";
 import { realtimeDb } from "./firebase-config";
+import { recordParticipant } from "./stats-service";
 import type { Mode } from "./types";
 
 export async function connect(
@@ -22,6 +23,10 @@ export async function connect(
     mode,
     joinedAt: serverTimestamp(),
   });
+
+  // Tally this device toward the cumulative usage count (idempotent per uid;
+  // admin resets it between events).
+  await recordParticipant(sessionId);
 
   try {
     await onDisconnect(connectionRef).remove();

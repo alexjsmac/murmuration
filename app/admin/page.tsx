@@ -5,6 +5,8 @@ import { useScene } from "@/hooks/useScene";
 import { useGlitchers } from "@/hooks/useGlitchers";
 import { useObjects } from "@/hooks/useObjects";
 import { useNow } from "@/hooks/useNow";
+import { useParticipantCount } from "@/hooks/useParticipantCount";
+import { resetParticipantCount } from "@/lib/stats-service";
 import {
   setAudioGain,
   setGlobalIntensity,
@@ -62,6 +64,7 @@ function Dashboard() {
   const glitchers = useGlitchers();
   const objects = useObjects();
   const now = useNow(1000);
+  const participantCount = useParticipantCount();
   const [connections, setConnections] = useState<
     Record<string, Connection>
   >({});
@@ -109,6 +112,31 @@ function Dashboard() {
         <Stat label="Glitchers" value={counts.glitchers} />
         <Stat label="Wireframes" value={wireframeCount} />
         <Stat label="Round" value={`${remainingSec}s`} />
+      </section>
+
+      <section className="mb-6">
+        <div className="border border-foreground/10 p-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+              Total Participants
+            </p>
+            <p className="text-3xl font-mono mt-1">{participantCount}</p>
+            <p className="text-[9px] uppercase tracking-[0.3em] text-foreground/30 mt-1">
+              Unique devices since last reset
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Reset the participant count to zero?")) {
+                resetParticipantCount();
+              }
+            }}
+            className="border border-magenta/60 bg-magenta/10 hover:bg-magenta/25 px-4 py-3 uppercase tracking-[0.3em] text-xs text-magenta"
+          >
+            [ Reset ]
+          </button>
+        </div>
       </section>
 
       <section className="space-y-2 mb-6">

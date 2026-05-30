@@ -39,6 +39,15 @@
       "$sessionId": {
         ".write": "auth != null && auth.uid == $sessionId"
       }
+    },
+    "stats": {
+      ".read": true,
+      ".write": "auth != null",
+      "participants": {
+        "$sessionId": {
+          ".validate": "newData.isNumber() || !newData.exists()"
+        }
+      }
     }
   }
 }
