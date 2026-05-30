@@ -11,7 +11,7 @@ export type ConnRegistry = Map<
   { pos: THREE.Vector3; color: THREE.Color }
 >;
 
-const CONNECT_DIST = 2.4; // objects closer than this start linking
+const CONNECT_DIST = 2.8; // objects closer than this start linking
 const MAX_STRANDS = 48; // max connected pairs rendered (O(n²) scan, capped)
 const STRANDS_PER_PAIR = 2; // "hair" filaments per connection
 const POINTS = 9; // points along each filament
@@ -76,7 +76,7 @@ export function Connections({ registry }: { registry: ConnRegistry }) {
 
         const cA = entries[i].color;
         const cB = entries[j].color;
-        const bright = 0.3 + 1.7 * proximity + bass * 0.9; // HDR (>1) → blooms
+        const bright = 0.6 + 3.0 * proximity + bass * 1.4; // HDR (>1) → blooms
         const amp = (BASE_AMP + bass * BASS_AMP) * proximity;
 
         // Two perpendicular axes for the jitter (robust when near-vertical).
@@ -137,6 +137,7 @@ export function Connections({ registry }: { registry: ConnRegistry }) {
         blending={THREE.AdditiveBlending}
         toneMapped={false}
         depthWrite={false}
+        depthTest={false}
       />
     </lineSegments>
   );
