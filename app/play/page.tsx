@@ -39,16 +39,22 @@ function FullStatus({ label }: { label: string }) {
 
 function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
-      <div className="text-center space-y-1">
-        <p className="text-xs uppercase tracking-[0.4em] text-foreground/40">
-          Choose Role
+    <main className="flex-1 flex flex-col items-center justify-center p-6 gap-7">
+      <div className="text-center space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.5em] text-magenta">
+          A Co-Creation
         </p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          <span className="bg-yellow text-black px-2 py-0.5">SELECT MODE</span>
+        <h1 className="leading-none">
+          <span className="bg-yellow text-black inline-block font-bold tracking-tight text-3xl px-2 py-1">
+            MURMURATION
+          </span>
         </h1>
       </div>
+
       <div className="w-full max-w-sm flex flex-col gap-3">
+        <p className="text-xs uppercase tracking-[0.4em] text-foreground/40 text-center">
+          Choose Role
+        </p>
         <button
           type="button"
           onClick={() => onPick("placer")}
@@ -77,9 +83,29 @@ function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
           </p>
         </button>
       </div>
-      <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/30">
-        SYSTEM::ONLINE
-      </p>
+
+      <footer className="text-center space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/45 leading-relaxed">
+          A project by Alex MacLean of BluHeron Interactive
+        </p>
+        <div className="flex items-center justify-center gap-4 text-[10px] uppercase tracking-[0.3em]">
+          <a
+            href="https://www.instagram.com/alexjsmac/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-magenta hover:text-hot-pink transition-colors"
+          >
+            Instagram
+          </a>
+          <span className="text-foreground/20">·</span>
+          <a
+            href="mailto:alex@bluheroninteractive.com"
+            className="text-magenta hover:text-hot-pink transition-colors"
+          >
+            Email
+          </a>
+        </div>
+      </footer>
     </main>
   );
 }
