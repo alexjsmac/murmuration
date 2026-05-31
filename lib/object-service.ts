@@ -26,6 +26,8 @@ export async function upsertWireframe(
     effect: Effect;
     position: Position3;
     rotation: Position3;
+    faceMesh?: number[];
+    faceShade?: number[];
   },
 ): Promise<void> {
   if (!realtimeDb) return;

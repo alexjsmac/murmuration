@@ -144,8 +144,17 @@ export function PlacerMode({ sessionId }: { sessionId: string }) {
         setSelfieState("noface");
         return;
       }
-      await updateWireframeFields(sessionId, {
+      // Full upsert (not a partial update): on Android the camera backgrounds
+      // the page, the RTDB socket drops, and onDisconnect removes the wireframe
+      // node — so a partial update would create a node missing the required
+      // fields and fail the validate rule ("permission denied"). Writing every
+      // required field re-creates the node cleanly and re-arms onDisconnect.
+      await upsertWireframe(sessionId, {
         shape: "selfie",
+        color,
+        effect,
+        position: padToScene(padPosRef.current),
+        rotation: { x: 0, y: 0, z: 0 },
         faceMesh: res.points,
         faceShade: res.shade,
       });
